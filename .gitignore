@@ -1,2 +1,4 @@
 external/
 *.exe
+build/
+.vscode/
