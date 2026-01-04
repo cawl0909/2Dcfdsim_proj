@@ -1,4 +1,3 @@
-external/
 *.exe
 build/
 .vscode/
