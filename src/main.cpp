@@ -2,12 +2,13 @@
 #include <vector>
 #include <string>
 #include <random>
-
+#include <memory>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
 #include "vectors.h"
+#include "Fluid.h"
 
 void cleanup(SDL_Window* window, SDL_Renderer* renderer)
 {
@@ -22,14 +23,13 @@ int main(int argc, char *argv[])
     // Simulation Paramters
     const size_t GRID_SIZE_X = 20;
     const size_t GRID_SIZE_Y = 20;
+    const double CELL_LENGTH = 0.5;
     const double TIME_STEP = 0.1;
 
-    // MAC grid initialised with 0s
+    // Fluid Class initialising
     
-    std::vector<std::vector<double>> u_grid(GRID_SIZE_Y,std::vector<double>(GRID_SIZE_X+1,0));
-    std::vector<std::vector<double>> v_grid(GRID_SIZE_Y+1,std::vector<double>(GRID_SIZE_X,0));
-    std::vector<std::vector<double>> p_grid(GRID_SIZE_Y,std::vector<double>(GRID_SIZE_X,0));
-    
+    std::unique_ptr<Fluid> fluid_obj = std::make_unique<Fluid>(GRID_SIZE_X,GRID_SIZE_Y,CELL_LENGTH,TIME_STEP);
+
     // GUI Paramters
     const size_t WINDOW_SIZE_X = 640;
     const size_t WINDOW_SIZE_Y = 640;
