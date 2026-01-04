@@ -10,5 +10,6 @@ int main()
     std::cout<<"Hello world, first cfd test"<<std::endl;
     vector2d temp{1,2};
     std::cout<<temp<<std::endl;
+    std::cout<<"Happy as can be"<<std::endl;
     return 0;
 }
