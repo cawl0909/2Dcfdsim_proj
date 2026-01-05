@@ -6,177 +6,84 @@
 
 #include "Fluid.h"
 
-
-Fluid::Fluid(size_t _grid_size_x, size_t _grid_size_y, double _cell_length ,double _time_step)
+Fluid::Fluid(double _density, int _numX, int _numY, double _h, double _over_relaxtion)
 {
-    init_gird_x = _grid_size_x;
-    init_grid_y = _grid_size_y;
-    grid_size_x = _grid_size_x+2; //extra boundary cell modification
-    grid_size_y = _grid_size_y+2;
-    cell_length = _cell_length;
-    time_step = _time_step;
-    velocity_grid_u =  std::vector<std::vector<double>>(grid_size_x+1,std::vector<double>(grid_size_y,0));
-    velocity_grid_v =  std::vector<std::vector<double>>(grid_size_x,std::vector<double>(grid_size_y+1,0));
+    fluid_density = _density;
+    numX = _numX +2;
+    numY = _numY +2;
+    numCells = numX*numY;
+    cell_size = _h;
+    over_relaxation = _over_relaxtion;
+    num = _numX*_numY;
 
-    pressure_grid =  std::vector<std::vector<double>>(grid_size_x,std::vector<double>(grid_size_y,0));
-    smoke_field =  std::vector<std::vector<double>>(grid_size_x,std::vector<double>(grid_size_y,0));
+    u_grid = std::vector<double>(numCells,0);
+    v_grid = std::vector<double>(numCells,0);
+    new_u_grid = std::vector<double>(numCells,0);
+    new_v_grid = std::vector<double>(numCells,0);
+    pressure = std::vector<double>(numCells,0);
+    solid = std::vector<double>(numCells,0);
+    mass = std::vector<double>(numCells,0);
+    new_mass.resize(numCells,1.0);
 
-    obstacle_grid =  std::vector<std::vector<int>>(grid_size_x,std::vector<int>(grid_size_y,0)); 
 }
 
-// ---------------------------------------------------------------------------------
-
-void Fluid::apply_gravity()
+void Fluid::integrate(double dt, double gravity)
 {
-    for(int i = 1; i<velocity_grid_v.size()-1;i++)
+    int n = numY;
+    for(int i = 1; i < numX-1;i++)
     {
-        for(int j=1;j<velocity_grid_v[i].size()-1;j++)
+        for(int j = 1; j< numY-1;j++)
         {
-            if((obstacle_grid[i][j] != 0) && (obstacle_grid[i][j-1] != 0))
+            if ((solid[i*n + j] != 1.0) && (solid[i*n + j-1] != 1.0))
             {
-                double new_v = velocity_grid_v[i][j] + G*time_step;
-                velocity_grid_v[i][j] = new_v;
+                v_grid[i*n+j] += gravity*dt;
             }
         }
     }
 }
 
-void Fluid::pressure_solve(int interations)
+void Fluid::solveIncompressability(int numIterations, double dt)
 {
-    double overelxation = 1.7;
-    double units_scale =  (fluid_density*cell_length)/time_step;
+    int n = numY;
+    double const_params = fluid_density*(dt*cell_size);
 
-    for(int iteration = 0; iteration < interations; iteration++)
+    for (int iter = 0; iter < numIterations; iter++)
     {
-        for(int i = 1; i<grid_size_x-1;i++)
+        for (int i = 1; i < numX-1; i++)
         {
-            for(int j=1; j<grid_size_y-1;j++)
+            for (int j = 1; j < numY-1; j++)
             {
-                if(is_solid(i,j))
-                {
-                    continue;
-                }
-                
-                int sx_back = obstacle_grid[i-1][j];
-                int sx_forward = obstacle_grid[i+1][j];
-                int sy_up = obstacle_grid[i][j+1];
-                int sy_down = obstacle_grid[i][j-1];
-                
-                int s = sx_back + sx_forward + sy_down + sy_up;
-                if(s == 0)
+                if(solid[i*n +j] == 0.0)
                 {
                     continue;
                 }
 
-                double div = (velocity_grid_u[i+1][j] - velocity_grid_u[i][j]) + (velocity_grid_v[i][j+1] - velocity_grid_v[i][j]);
-                
-                double p = -(div/s)*1.7; //overrelxation factor for gauss sidel
+                double s_left = solid[(i-1)*n +j];
+                double s_right = solid[(i+1)*n + j];
+                double s_top = solid[(i*n + j + 1)];
+                double s_bottom = solid[(i*n + j -1)];
 
-                pressure_grid[i][j] = pressure_grid[i][j] + p*units_scale;
+                double s_total = s_left + s_bottom + s_top + s_right;
 
-                velocity_grid_u[i][j] -= sx_back*p;
-                velocity_grid_u[i+1][j] += sx_forward*p;
-                velocity_grid_v[i][j] -= sy_down*p;
-                velocity_grid_v[i][j+1] += sy_up*p;
+                if(s_total == 0.0)
+                {
+                    continue;
+                }
+
+                double divergence_x = u_grid[(i+1)*n + j] - u_grid[i*n+j];
+                double divergence_y = v_grid[i*n + j +1] - v_grid[i*n+j];
+                double divergence = divergence_x + divergence_y;
+
+                double temp = -(divergence/s_total);
+                double temp = temp*over_relaxation;
+                pressure[i*n+j] += const_params*temp;
+
+                u_grid[i*n+j] -= (s_left*temp);
+                u_grid[(i+1)+j] += (s_right*temp);
+                v_grid[i*n+j] -= (s_bottom*temp);
+                v_grid[i*n+j+1] += (s_top*temp);
+
             }
         }
-    }
-}
-
-
-
-
-
-
-
-// ---------------------------------------------------------------------------------
-
-double Fluid::calculate_velocity_divergence(int x, int y)
-{
-    double velocity_u_left = velocity_grid_u[x][y];
-    double velocity_u_right  = velocity_grid_u[x+1][y];
-
-    double velocity_v_top = velocity_grid_v[x][y+1];
-    double velocity_v_bottom = velocity_grid_v[x][y];
-
-    double partial_u_x = (velocity_u_right-velocity_u_left);
-    double partial_v_y = (velocity_v_top-velocity_v_bottom);
-
-    double divergence = partial_u_x + partial_v_y;
-
-    return divergence;
-}
-
-bool Fluid::is_solid(int x, int y)
-{
-    if(obstacle_grid[x][y] == 0)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-
-// ---------------------------------------------------------------------------------
-
-
-void Fluid::randomise_velocity_field(std::mt19937& random_generator)
-{
-    std::uniform_real_distribution<double> dist(0.0,10);
-
-    for (int i = 0; i<velocity_grid_u.size();i++)
-    {
-        for (int j = 0; j<velocity_grid_u[i].size();j++)
-        {
-            double random_number =  dist(random_generator);
-            velocity_grid_u[i][j] = random_number;
-        }
-    }
-
-    for (int i = 0; i<velocity_grid_v.size();i++)
-    {
-        for(int j = 0; j<velocity_grid_v[j].size();j++)
-        {
-            double random_number = dist(random_generator);
-            velocity_grid_v[i][j] = random_number;
-        }
-    }
-}
-
-void Fluid::vortex_shedding_obstacle()
-{
-    for(int i = 0; i<obstacle_grid.size();i++)
-    {
-        for(int j = 0; j<obstacle_grid[i].size();j++)
-        {
-            if((i == 0) || (j == 0) || (j == grid_size_y-1)){
-                obstacle_grid[i][j] = 0;
-            }
-            else
-            {
-                obstacle_grid[i][j] = 1;
-            }
-        }
-    }
-}
-
-void Fluid::box_setup()
-{
-    for(int i = 0; i<obstacle_grid.size();i++)
-    {
-        for(int j = 0; j<obstacle_grid[i].size();j++)
-        {
-            if((i == 0) || (i == grid_size_x-1) || (j == 0) || (j == grid_size_y-1))
-            {
-                obstacle_grid[i][j] = 0;
-            }
-            else
-            {
-                obstacle_grid[i][j] = 1;
-            }
-        }
-    }
+    } 
 }

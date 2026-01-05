@@ -10,43 +10,27 @@
 class Fluid
 {
 public:
-    size_t init_gird_x;
-    size_t init_grid_y;
+    double fluid_density;
+    int numX;
+    int numY;
+    int numCells;
+    double cell_size; // h
+    double over_relaxation;
+    std::vector<double> u_grid;
+    std::vector<double> v_grid;
+    std::vector<double> new_u_grid;
+    std::vector<double> new_v_grid;
+    std::vector<double> pressure;
+    std::vector<double> solid;
+    std::vector<double> mass;
+    std::vector<double> new_mass;
+    int num;
 
-    size_t grid_size_x;
-    size_t grid_size_y;
+    Fluid(double _density, int _numX, int _numY, double _h, double _over_relaxation);
 
-    double cell_length;
-    double fluid_density = 1;
-    double G = 9.8;
+    void integrate(double dt, double gravity);
 
-    double time_step;
-
-    std::vector<std::vector<double>> velocity_grid_u;
-    std::vector<std::vector<double>> velocity_grid_v;
-
-    std::vector<std::vector<double>> pressure_grid;
-    std::vector<std::vector<double>> smoke_field;
-
-    std::vector<std::vector<int>> obstacle_grid;
-
-    Fluid(size_t _grid_size_x, size_t _grid_size_y, double _cell_length, double _time_step);
-
-
-    // Main split solver loop
-    void apply_gravity();
-    void pressure_solve(int iterations);
-    void advect();
-
-    // Calculation helper functions
-    double calculate_velocity_divergence(int x, int y);
-    bool is_solid(int x, int y);
-
-    // Fluid test functions
-
-    void randomise_velocity_field(std::mt19937& random_generator);
-    void vortex_shedding_obstacle();
-    void box_setup();
+    void solveIncompressability(int numIterations, double dt);
 };
 
 

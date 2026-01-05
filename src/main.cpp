@@ -21,29 +21,29 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer)
 int main(int argc, char *argv[])
 {
     // Simulation Paramters
-    const size_t GRID_SIZE_X = 30;
-    const size_t GRID_SIZE_Y = 30;
+    const size_t GRID_SIZE_X = 20;
+    const size_t GRID_SIZE_Y = 20;
     const double CELL_LENGTH = 1;
     constexpr double TIME_STEP = 1.0/60;
+    const double OVER_RELAXATION = 1.7;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> distrib(1,255);
 
     // Fluid Class initialising
-    
-    std::unique_ptr<Fluid> fluid_obj = std::make_unique<Fluid>(GRID_SIZE_X,GRID_SIZE_Y,CELL_LENGTH,TIME_STEP);
-    
-    fluid_obj->randomise_velocity_field(gen);
-    fluid_obj->box_setup();
+
+    std::unique_ptr<Fluid> fluidobj = std::make_unique<Fluid>(1.0,GRID_SIZE_X,GRID_SIZE_Y,CELL_LENGTH,OVER_RELAXATION);
+    std::cout<<"Test"<<std::endl;
+    fluidobj->integrate(TIME_STEP,9.81);
 
     // GUI Paramters
     const float PIXEL_SCALE = 32.0;
-    const size_t WINDOW_SIZE_X = (GRID_SIZE_X+2)*PIXEL_SCALE;
-    const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y+2)*PIXEL_SCALE;
+    const size_t WINDOW_SIZE_X = (GRID_SIZE_X)*PIXEL_SCALE;
+    const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y)*PIXEL_SCALE;
 
     const char WINDOW_NAME[] = "CFD SIM";
 
-    const size_t TARGET_FPS = 60;
+    const size_t TARGET_FPS = 6;
     const size_t TARGET_FRAME_TIME = 1000/TARGET_FPS;
 
     // Random 
@@ -94,8 +94,6 @@ int main(int argc, char *argv[])
             else if (e.type == SDL_EVENT_KEY_DOWN)
             {
                 std::cout<<"Key pressed"<<SDL_GetKeyName(e.key.key)<<std::endl;
-                fluid_obj->pressure_solve(1);
-                std::cout<<"Pressure at 5,5: "<<fluid_obj->pressure_grid[5][5]<<std::endl;
                 break;
             }
             
@@ -106,12 +104,11 @@ int main(int argc, char *argv[])
         SDL_SetRenderDrawColor(renderer,255,0,0,SDL_ALPHA_OPAQUE);
         //SDL_RenderLine(renderer,0,0,WINDOW_SIZE_X,WINDOW_SIZE_Y);
         SDL_RenderPoint(renderer,0,0);
-        for(size_t i = 0; i < GRID_SIZE_X+2; i++)
+        for(size_t i = 0; i < GRID_SIZE_X; i++)
         {
-            for(size_t j = 0; j < GRID_SIZE_Y+2; j++)
+            for(size_t j = 0; j < GRID_SIZE_Y; j++)
             {
-                int transformed_y_coord = abs(j-(GRID_SIZE_Y-1));
-                int scale = std::round(((fluid_obj->calculate_velocity_divergence(i,j))/10)*255);
+                int scale = distrib(gen);
                 SDL_SetRenderDrawColor(renderer,scale,0,0,255);
                 SDL_FRect temp_rect = {i*PIXEL_SCALE,j*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
                 SDL_RenderFillRect(renderer,&temp_rect);
