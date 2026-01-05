@@ -26,14 +26,20 @@ int main(int argc, char *argv[])
     const double CELL_LENGTH = 0.5;
     const double TIME_STEP = 0.1;
 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> distrib(1,255);
+
     // Fluid Class initialising
     
     std::unique_ptr<Fluid> fluid_obj = std::make_unique<Fluid>(GRID_SIZE_X,GRID_SIZE_Y,CELL_LENGTH,TIME_STEP);
+    
+    fluid_obj->randomise_velocity_field(gen);
 
     // GUI Paramters
-    const size_t WINDOW_SIZE_X = 640;
-    const size_t WINDOW_SIZE_Y = 640;
     const float PIXEL_SCALE = 32.0;
+    const size_t WINDOW_SIZE_X = 20*PIXEL_SCALE;
+    const size_t WINDOW_SIZE_Y = 20*PIXEL_SCALE;
 
     const char WINDOW_NAME[] = "CFD SIM";
 
@@ -41,10 +47,6 @@ int main(int argc, char *argv[])
     const size_t TARGET_FRAME_TIME = 1000/TARGET_FPS;
 
     // Random 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> distrib(1,255);
-
     // ----
 
     if(!(SDL_Init(SDL_INIT_VIDEO)))
@@ -88,6 +90,7 @@ int main(int argc, char *argv[])
                 running = false;
                 break;
             }
+            
         }
         SDL_SetRenderDrawColor(renderer,255,255,255,255);
         SDL_RenderClear(renderer);
@@ -95,11 +98,21 @@ int main(int argc, char *argv[])
         SDL_SetRenderDrawColor(renderer,255,0,0,SDL_ALPHA_OPAQUE);
         //SDL_RenderLine(renderer,0,0,WINDOW_SIZE_X,WINDOW_SIZE_Y);
         SDL_RenderPoint(renderer,0,0);
-        for(size_t i = 0; i < WINDOW_SIZE_X/PIXEL_SCALE; i++)
+        for(size_t i = 0; i < GRID_SIZE_X; i++)
         {
-            for(size_t j = 0; j < WINDOW_SIZE_Y/PIXEL_SCALE; j++)
+            for(size_t j = 0; j < GRID_SIZE_Y; j++)
             {
-                SDL_SetRenderDrawColor(renderer,distrib(gen),distrib(gen),distrib(gen),SDL_ALPHA_OPAQUE);
+                int transformed_y_coord = abs(j-(GRID_SIZE_Y-1));
+                int scale = std::round((fluid_obj->calculate_velocity_divergence(i,transformed_y_coord)/10)*255);
+                if(transformed_y_coord == 0)
+                {
+                    SDL_SetRenderDrawColor(renderer,255,255,255,SDL_ALPHA_OPAQUE);
+                }
+                else
+                {
+                    SDL_SetRenderDrawColor(renderer,scale,0,0,SDL_ALPHA_OPAQUE);
+
+                }
                 SDL_FRect temp_rect = {i*PIXEL_SCALE,j*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
                 SDL_RenderFillRect(renderer,&temp_rect);
                 //SDL_RenderPoint(renderer,i,j);

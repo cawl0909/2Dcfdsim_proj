@@ -27,10 +27,19 @@ public:
 
     Fluid(size_t _grid_size_x, size_t _grid_size_y, double _cell_length, double _time_step);
 
-    void advect();
 
+    // Main split solver loop
+    void advect();
+    void update_velocities();
     void pressure_solve();
 
+    // Calculation helper functions
+    double calculate_velocity_divergence(int x, int y);
+
+
+    // Fluid test functions
+
+    void randomise_velocity_field(std::mt19937& random_generator);
 };
 
 
