@@ -35,7 +35,7 @@ public:
 
     // Calculation helper functions
     double calculate_velocity_divergence(int x, int y);
-
+    bool is_solid(int x, int y);
 
     // Fluid test functions
 
