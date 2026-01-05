@@ -10,6 +10,9 @@
 class Fluid
 {
 public:
+    size_t init_gird_x;
+    size_t init_grid_y;
+
     size_t grid_size_x;
     size_t grid_size_y;
 
@@ -42,6 +45,7 @@ public:
     // Fluid test functions
 
     void randomise_velocity_field(std::mt19937& random_generator);
+    void vortex_shedding_obstacle();
 };
 
 

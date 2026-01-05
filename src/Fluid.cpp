@@ -9,8 +9,10 @@
 
 Fluid::Fluid(size_t _grid_size_x, size_t _grid_size_y, double _cell_length ,double _time_step)
 {
-    grid_size_x = _grid_size_x;
-    grid_size_y = _grid_size_y;
+    init_gird_x = _grid_size_x;
+    init_grid_y = _grid_size_y;
+    grid_size_x = _grid_size_x+2; //extra boundary cell modification
+    grid_size_y = _grid_size_y+2;
     cell_length = _cell_length;
     time_step = _time_step;
     velocity_grid_u =  std::vector<std::vector<double>>(grid_size_x+1,std::vector<double>(grid_size_y,0));
@@ -23,12 +25,15 @@ Fluid::Fluid(size_t _grid_size_x, size_t _grid_size_y, double _cell_length ,doub
 
 void Fluid::apply_gravity()
 {
-    for(int i = 0; i<velocity_grid_v.size();i++)
+    for(int i = 1; i<velocity_grid_v.size()-1;i++)
     {
-        for(int j=0;j<velocity_grid_v[i].size();j++)
+        for(int j=1;j<velocity_grid_v[i].size()-1;j++)
         {
-            double new_v = velocity_grid_v[i][j] + G*time_step;
-            velocity_grid_v[i][j] = new_v;
+            if((obstacle_grid[i][j] != 0) && (obstacle_grid[i][j-1] != 0))
+            {
+                double new_v = velocity_grid_v[i][j] + G*time_step;
+                velocity_grid_v[i][j] = new_v;
+            }
         }
     }
 }
@@ -140,3 +145,21 @@ void Fluid::randomise_velocity_field(std::mt19937& random_generator)
     }
 }
 
+void Fluid::vortex_shedding_obstacle()
+{
+    for(int i = 0; i<obstacle_grid.size();i++)
+    {
+        for(int j = 0; j<obstacle_grid[i].size();j++)
+        {
+            if((i == 0) || (j == 0) || (j = grid_size_y-1))
+            {
+                obstacle_grid[i][j] = 0;
+            }
+            {
+                std::cout<<"called"<<std::endl;
+                obstacle_grid[i][j] = 1;
+            }
+            std::cout<<i<<","<<j<<std::endl;
+        }
+    }
+}

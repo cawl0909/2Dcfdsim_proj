@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
     std::unique_ptr<Fluid> fluid_obj = std::make_unique<Fluid>(GRID_SIZE_X,GRID_SIZE_Y,CELL_LENGTH,TIME_STEP);
     
     fluid_obj->randomise_velocity_field(gen);
+    fluid_obj->vortex_shedding_obstacle();
 
     // GUI Paramters
     const float PIXEL_SCALE = 32.0;
@@ -93,7 +94,7 @@ int main(int argc, char *argv[])
             else if (e.type == SDL_EVENT_KEY_DOWN)
             {
                 std::cout<<"Key pressed"<<SDL_GetKeyName(e.key.key)<<std::endl;
-                //fluid_obj->apply_gravity();
+                fluid_obj->apply_gravity();
                 break;
             }
             
