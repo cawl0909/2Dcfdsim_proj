@@ -30,10 +30,10 @@ public:
 
 
     // Main split solver loop
-    void advect();
     void apply_gravity();
-    void update_velocities();
     void pressure_solve();
+    void update_velocities();
+    void advect();
 
     // Calculation helper functions
     double calculate_velocity_divergence(int x, int y);

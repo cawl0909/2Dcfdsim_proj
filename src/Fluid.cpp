@@ -103,7 +103,7 @@ double Fluid::calculate_velocity_divergence(int x, int y)
 
 bool Fluid::is_solid(int x, int y)
 {
-    if(obstacle_grid[x][y] == 1)
+    if(obstacle_grid[x][y] == 0)
     {
         return true;
     }
