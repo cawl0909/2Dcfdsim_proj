@@ -24,8 +24,7 @@ int main(int argc, char *argv[])
     const size_t GRID_SIZE_X = 20;
     const size_t GRID_SIZE_Y = 20;
     const double CELL_LENGTH = 0.5;
-    const double TIME_STEP = 0.1;
-
+    constexpr double TIME_STEP = 1.0/60;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> distrib(1,255);
@@ -78,6 +77,7 @@ int main(int argc, char *argv[])
 
     bool running = true;
 
+
     size_t start_tick;
     while (running) 
     {
@@ -88,6 +88,12 @@ int main(int argc, char *argv[])
             if (e.type == SDL_EVENT_QUIT)
             {
                 running = false;
+                break;
+            }
+            else if (e.type == SDL_EVENT_KEY_DOWN)
+            {
+                std::cout<<"Key pressed"<<SDL_GetKeyName(e.key.key)<<std::endl;
+                //fluid_obj->apply_gravity();
                 break;
             }
             

@@ -15,6 +15,7 @@ public:
 
     double cell_length;
     double fluid_density = 1;
+    double G = 9.8;
 
     double time_step;
 
@@ -30,6 +31,7 @@ public:
 
     // Main split solver loop
     void advect();
+    void apply_gravity();
     void update_velocities();
     void pressure_solve();
 

@@ -17,21 +17,24 @@ Fluid::Fluid(size_t _grid_size_x, size_t _grid_size_y, double _cell_length ,doub
     velocity_grid_v =  std::vector<std::vector<double>>(grid_size_x,std::vector<double>(grid_size_y+1,0));
     pressure_grid =  std::vector<std::vector<double>>(grid_size_x,std::vector<double>(grid_size_y,0));
     obstacle_grid =  std::vector<std::vector<int>>(grid_size_x,std::vector<int>(grid_size_y,0)); //initialise empty boundary.
-
-    //box 
-    for(int i = 0;i<grid_size_x;i++)
-    {
-        obstacle_grid[i][0] = 1;
-        obstacle_grid[i][grid_size_y-1] = 1;
-    }
-    for(int j = 0;j<grid_size_y;j++)
-    {
-        obstacle_grid[0][j] = 1;
-        obstacle_grid[grid_size_x-1][j] = 1;
-    }
 }
 
 // ---------------------------------------------------------------------------------
+
+void Fluid::apply_gravity()
+{
+    for(int i = 0; i<velocity_grid_v.size();i++)
+    {
+        for(int j=0;j<velocity_grid_v[i].size();j++)
+        {
+            double new_v = velocity_grid_v[i][j] + G*time_step;
+            velocity_grid_v[i][j] = new_v;
+        }
+    }
+}
+
+
+
 
 void Fluid::update_velocities()
 {
