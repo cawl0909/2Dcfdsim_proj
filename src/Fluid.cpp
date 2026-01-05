@@ -17,8 +17,11 @@ Fluid::Fluid(size_t _grid_size_x, size_t _grid_size_y, double _cell_length ,doub
     time_step = _time_step;
     velocity_grid_u =  std::vector<std::vector<double>>(grid_size_x+1,std::vector<double>(grid_size_y,0));
     velocity_grid_v =  std::vector<std::vector<double>>(grid_size_x,std::vector<double>(grid_size_y+1,0));
+
     pressure_grid =  std::vector<std::vector<double>>(grid_size_x,std::vector<double>(grid_size_y,0));
-    obstacle_grid =  std::vector<std::vector<int>>(grid_size_x,std::vector<int>(grid_size_y,0)); //initialise empty boundary.
+    smoke_field =  std::vector<std::vector<double>>(grid_size_x,std::vector<double>(grid_size_y,0));
+
+    obstacle_grid =  std::vector<std::vector<int>>(grid_size_x,std::vector<int>(grid_size_y,0)); 
 }
 
 // ---------------------------------------------------------------------------------
@@ -38,51 +41,49 @@ void Fluid::apply_gravity()
     }
 }
 
-
-
-
-void Fluid::update_velocities()
+void Fluid::pressure_solve(int interations)
 {
-    double constant = time_step/(fluid_density*cell_length);
+    double overelxation = 1.7;
+    double units_scale =  (fluid_density*cell_length)/time_step;
 
-    //updating u
-
-    for(int i = 0; i<velocity_grid_u.size();i++)
+    for(int iteration = 0; iteration < interations; iteration++)
     {
-        for(int j = 0; j<velocity_grid_u[i].size();j++)
+        for(int i = 1; i<grid_size_x-1;i++)
         {
-            if((is_solid(i,j) == true) || (is_solid(i-1,j) == true))
+            for(int j=1; j<grid_size_y-1;j++)
             {
-                velocity_grid_u[i][j] = 0;
-                continue;
-            }
-            else
-            {
-                velocity_grid_u[i][j] = velocity_grid_u[i][j] - constant*(pressure_grid[i][j]-pressure_grid[i-1][j]);  
-            }
+                if(is_solid(i,j))
+                {
+                    continue;
+                }
+                
+                int sx_back = obstacle_grid[i-1][j];
+                int sx_forward = obstacle_grid[i+1][j];
+                int sy_up = obstacle_grid[i][j+1];
+                int sy_down = obstacle_grid[i][j-1];
+                
+                int s = sx_back + sx_forward + sy_down + sy_up;
+                if(s == 0)
+                {
+                    continue;
+                }
 
-        }
-        
-    }
+                double div = (velocity_grid_u[i+1][j] - velocity_grid_u[i][j]) + (velocity_grid_v[i][j+1] - velocity_grid_v[i][j]);
+                
+                double p = -(div/s)*1.7; //overrelxation factor for gauss sidel
 
-    // updating v
+                pressure_grid[i][j] = pressure_grid[i][j] + p*units_scale;
 
-    for(int i = 0; i<velocity_grid_v.size(); i++)
-    {
-        for(int j=0; j<velocity_grid_v[i].size();j++)
-        {
-            if((is_solid(i,j) == true) || (is_solid(i,j-1) == true))
-            {
-                velocity_grid_v[i][j] = 0;
-                continue;
-            }
-            else
-            {
-                velocity_grid_v[i][j] = velocity_grid_v[i][j] - constant*(pressure_grid[i][j] - pressure_grid[i][j-1]);
+                velocity_grid_u[i][j] -= sx_back*p;
+                velocity_grid_u[i+1][j] += sx_forward*p;
+                velocity_grid_v[i][j] -= sy_down*p;
+                velocity_grid_v[i][j+1] += sy_up*p;
             }
         }
     }
 }
+
+
 
 
 
@@ -98,8 +99,8 @@ double Fluid::calculate_velocity_divergence(int x, int y)
     double velocity_v_top = velocity_grid_v[x][y+1];
     double velocity_v_bottom = velocity_grid_v[x][y];
 
-    double partial_u_x = (velocity_u_right-velocity_u_left)/(cell_length); 
-    double partial_v_y = (velocity_v_top-velocity_v_bottom)/(cell_length);
+    double partial_u_x = (velocity_u_right-velocity_u_left);
+    double partial_v_y = (velocity_v_top-velocity_v_bottom);
 
     double divergence = partial_u_x + partial_v_y;
 
@@ -151,15 +152,31 @@ void Fluid::vortex_shedding_obstacle()
     {
         for(int j = 0; j<obstacle_grid[i].size();j++)
         {
-            if((i == 0) || (j == 0) || (j = grid_size_y-1))
+            if((i == 0) || (j == 0) || (j == grid_size_y-1)){
+                obstacle_grid[i][j] = 0;
+            }
+            else
+            {
+                obstacle_grid[i][j] = 1;
+            }
+        }
+    }
+}
+
+void Fluid::box_setup()
+{
+    for(int i = 0; i<obstacle_grid.size();i++)
+    {
+        for(int j = 0; j<obstacle_grid[i].size();j++)
+        {
+            if((i == 0) || (i == grid_size_x-1) || (j == 0) || (j == grid_size_y-1))
             {
                 obstacle_grid[i][j] = 0;
             }
+            else
             {
-                std::cout<<"called"<<std::endl;
                 obstacle_grid[i][j] = 1;
             }
-            std::cout<<i<<","<<j<<std::endl;
         }
     }
 }

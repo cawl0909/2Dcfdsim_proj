@@ -26,6 +26,7 @@ public:
     std::vector<std::vector<double>> velocity_grid_v;
 
     std::vector<std::vector<double>> pressure_grid;
+    std::vector<std::vector<double>> smoke_field;
 
     std::vector<std::vector<int>> obstacle_grid;
 
@@ -34,8 +35,7 @@ public:
 
     // Main split solver loop
     void apply_gravity();
-    void pressure_solve();
-    void update_velocities();
+    void pressure_solve(int iterations);
     void advect();
 
     // Calculation helper functions
@@ -46,6 +46,7 @@ public:
 
     void randomise_velocity_field(std::mt19937& random_generator);
     void vortex_shedding_obstacle();
+    void box_setup();
 };
 
 
