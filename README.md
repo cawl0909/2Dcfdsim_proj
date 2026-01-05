@@ -2,7 +2,7 @@
 
 This project simulates a a 2D eulerian fluid flow, and has a GUI for controlling parameters, boundary conditions and post processing for flow visualisations.
 
-This project was built with SDL3 and IMGUI, they are required to build the project with the CMake file.
+This project was built with SDL3 and IMGUI, they are required to build the project with the CMake file. I used Vcpkg manager to install SDL3 and used CMake and MinGW, G++ to build and compile on windows.
 
 Built and tested with G++ on: 
 - Windows

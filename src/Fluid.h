@@ -12,7 +12,9 @@ class Fluid
 public:
     size_t grid_size_x;
     size_t grid_size_y;
+
     double cell_length;
+    double fluid_density = 1;
 
     double time_step;
 
