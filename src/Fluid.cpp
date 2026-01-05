@@ -15,4 +15,5 @@ Fluid::Fluid(size_t _grid_size_x, size_t _grid_size_y, double _cell_length ,doub
     velocity_grid_u =  std::vector<std::vector<double>>(grid_size_y,std::vector<double>(grid_size_x+1,0));
     velocity_grid_v =  std::vector<std::vector<double>>(grid_size_y+1,std::vector<double>(grid_size_x,0));
     pressure_grid =  std::vector<std::vector<double>>(grid_size_y,std::vector<double>(grid_size_x,0));
+    obstacle_grid =  std::vector<std::vector<int>>(grid_size_y,std::vector<int>(grid_size_x,0)); //initialise empty boundary.
 }

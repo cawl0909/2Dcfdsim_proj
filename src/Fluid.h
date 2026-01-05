@@ -21,10 +21,13 @@ public:
 
     std::vector<std::vector<double>> pressure_grid;
 
+    std::vector<std::vector<int>> obstacle_grid;
+
     Fluid(size_t _grid_size_x, size_t _grid_size_y, double _cell_length, double _time_step);
 
     void advect();
-    
+
+    void pressure_solve();
 
 };
 
