@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <random>
 
 #include "vectors.h"
 
@@ -39,6 +40,13 @@ public:
     void integrate(double dt, double gravity);
 
     void solveIncompressability(int numIterations, double dt);
+
+
+
+    // Test functions
+
+
+    void randomise_velocities(std::mt19937& generator);
 };
 
 

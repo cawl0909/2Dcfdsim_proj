@@ -33,13 +33,26 @@ int main(int argc, char *argv[])
     // Fluid Class initialising
 
     std::unique_ptr<Fluid> fluidobj = std::make_unique<Fluid>(1.0,GRID_SIZE_X,GRID_SIZE_Y,CELL_LENGTH,OVER_RELAXATION);
-    std::cout<<"Test"<<std::endl;
-    fluidobj->integrate(TIME_STEP,9.81);
+    fluidobj->randomise_velocities(gen);
+    for(size_t i = 0; i < GRID_SIZE_X+2; i++)
+    {
+        for(size_t j = 0; j < GRID_SIZE_Y+2; j++)
+        {
+            if(i == 0 || i == 21 || j == 0 || j == 21)
+            {
+                fluidobj->solid[i][j] = 0;
+            }
+            else
+            {
+                fluidobj->solid[i][j] = 1;
+            }
+        }
+    }
 
     // GUI Paramters
     const float PIXEL_SCALE = 32.0;
-    const size_t WINDOW_SIZE_X = (GRID_SIZE_X)*PIXEL_SCALE;
-    const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y)*PIXEL_SCALE;
+    const size_t WINDOW_SIZE_X = (GRID_SIZE_X+2)*PIXEL_SCALE;
+    const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y+2)*PIXEL_SCALE;
 
     const char WINDOW_NAME[] = "CFD SIM";
 
@@ -94,6 +107,8 @@ int main(int argc, char *argv[])
             else if (e.type == SDL_EVENT_KEY_DOWN)
             {
                 std::cout<<"Key pressed"<<SDL_GetKeyName(e.key.key)<<std::endl;
+                fluidobj->solveIncompressability(1,TIME_STEP);
+                std::cout<<fluidobj->get_divergence(5,5)<<std::endl;
                 break;
             }
             
@@ -104,11 +119,12 @@ int main(int argc, char *argv[])
         SDL_SetRenderDrawColor(renderer,255,0,0,SDL_ALPHA_OPAQUE);
         //SDL_RenderLine(renderer,0,0,WINDOW_SIZE_X,WINDOW_SIZE_Y);
         SDL_RenderPoint(renderer,0,0);
-        for(size_t i = 0; i < GRID_SIZE_X; i++)
+        for(size_t i = 1; i < GRID_SIZE_X+1; i++)
         {
-            for(size_t j = 0; j < GRID_SIZE_Y; j++)
+            for(size_t j = 1; j < GRID_SIZE_Y+1; j++)
             {
-                int scale = distrib(gen);
+                int ty = abs(j-(GRID_SIZE_Y-1));
+                int scale = std::round(255*(abs(fluidobj->get_divergence(i,ty))));
                 SDL_SetRenderDrawColor(renderer,scale,0,0,255);
                 SDL_FRect temp_rect = {i*PIXEL_SCALE,j*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
                 SDL_RenderFillRect(renderer,&temp_rect);
