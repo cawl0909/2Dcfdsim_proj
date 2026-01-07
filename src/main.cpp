@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     // Simulation Paramters
     const size_t GRID_SIZE_X = 20;
     const size_t GRID_SIZE_Y = 20;
-    const double CELL_LENGTH = 1;
+    const double CELL_LENGTH = 1.0;
     constexpr double TIME_STEP = 1.0/60;
     const double OVER_RELAXATION = 1.7;
     std::random_device rd;
