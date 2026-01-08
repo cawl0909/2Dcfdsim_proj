@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 
     // Fluid Class initialising
 
-    std::unique_ptr<Fluid> fluidobj = std::make_unique<Fluid>(1.0,GRID_SIZE_X,GRID_SIZE_Y,CELL_LENGTH,OVER_RELAXATION);
+    std::unique_ptr<Fluid> fluidobj = std::make_unique<Fluid>(1000.0,GRID_SIZE_X,GRID_SIZE_Y,CELL_LENGTH,OVER_RELAXATION);
     fluidobj->randomise_velocities(gen);
     for(size_t i = 0; i < GRID_SIZE_X+2; i++)
     {
@@ -107,8 +107,8 @@ int main(int argc, char *argv[])
             else if (e.type == SDL_EVENT_KEY_DOWN)
             {
                 std::cout<<"Key pressed"<<SDL_GetKeyName(e.key.key)<<std::endl;
-                fluidobj->solveIncompressability(1,TIME_STEP);
-                std::cout<<fluidobj->get_divergence(5,5)<<std::endl;
+                fluidobj->solveIncompressability(50,TIME_STEP);
+                std::cout<<fluidobj->get_divergence(2,2)<<std::endl;
                 break;
             }
             
@@ -119,11 +119,11 @@ int main(int argc, char *argv[])
         SDL_SetRenderDrawColor(renderer,255,0,0,SDL_ALPHA_OPAQUE);
         //SDL_RenderLine(renderer,0,0,WINDOW_SIZE_X,WINDOW_SIZE_Y);
         SDL_RenderPoint(renderer,0,0);
-        for(size_t i = 1; i < GRID_SIZE_X+1; i++)
+        for(size_t i = 1; i < GRID_SIZE_X+2-1; i++)
         {
-            for(size_t j = 1; j < GRID_SIZE_Y+1; j++)
+            for(size_t j = 1; j < GRID_SIZE_Y+2-1; j++)
             {
-                int ty = abs(j-(GRID_SIZE_Y-1));
+                int ty = abs(j-(GRID_SIZE_Y+2-1));
                 int scale = std::round(255*(abs(fluidobj->get_divergence(i,ty))));
                 SDL_SetRenderDrawColor(renderer,scale,0,0,255);
                 SDL_FRect temp_rect = {i*PIXEL_SCALE,j*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
