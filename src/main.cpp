@@ -107,8 +107,10 @@ int main(int argc, char *argv[])
             else if (e.type == SDL_EVENT_KEY_DOWN)
             {
                 std::cout<<"Key pressed"<<SDL_GetKeyName(e.key.key)<<std::endl;
-                fluidobj->solveIncompressability(50,TIME_STEP);
-                std::cout<<fluidobj->get_divergence(2,2)<<std::endl;
+                //fluidobj->solveIncompressability(50,TIME_STEP);
+                //std::cout<<fluidobj->get_divergence(2,2)<<std::endl;
+                std::cout<<fluidobj->u_grid[1][1]<<std::endl;
+                std::cout<<fluidobj->grid_interpolation(1.005,1.500001,"u")<<std::endl;
                 break;
             }
             

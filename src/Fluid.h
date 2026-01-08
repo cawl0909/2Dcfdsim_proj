@@ -44,7 +44,7 @@ public:
 
     void border_velocity_extrapolate(); // need to use ghost edge cells to deal with the simulated region margins, so appropriate veloicties are extrapolated from neighbours
 
-    double grid_interpolation(double x, double y, std::string& field); //does a bivariate interpolation on a chosen field for advection fields
+    double grid_interpolation(double x, double y, std::string field); //does a bivariate interpolation on a chosen field for advection fields
 
     // Test functions
 

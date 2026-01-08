@@ -109,7 +109,7 @@ void Fluid::border_velocity_extrapolate()
     }
 }
 
-double Fluid::grid_interpolation(double x, double y, std::string& field)
+double Fluid::grid_interpolation(double x, double y, std::string field)
 {
 
     //For me to remember
@@ -119,42 +119,48 @@ double Fluid::grid_interpolation(double x, double y, std::string& field)
 
 
 
-    double one_over_cs = 1/cell_size;
-    double half_cs = cell_size/2;
+    double cs_1 = 1.0/cell_size;
+    double cs_2 = cell_size*0.5;
 
     double x_offset = 0.0;
     double y_offset = 0.0;
 
-    int x_trans = std::max(std::min(x,numX*cell_size),cell_size);
-    int y_trans = std::max(std::min(y,numY*cell_size),cell_size);
+    double xi = std::max(std::min(x,numX*cell_size),cell_size);
+    double yi = std::max(std::min(y,numY*cell_size),cell_size);
 
     std::vector<std::vector<double>> sample_field;
 
     if(field == "u")
     {
         sample_field = u_grid;
-        y_offset = half_cs;
+        y_offset = cs_2;
     }
     else if (field == "v")
     {
         sample_field = v_grid;
-        x_offset = half_cs;
+        x_offset = cs_2;
     }
     else if(field == "s")
     {
         sample_field =  mass;
-        x_offset = half_cs;
-        y_offset = half_cs;
+        x_offset = cs_2;
+        y_offset = cs_2;
     }
 
-    int xg0 = std::min(std::floor(((x_trans-x_offset)/(cell_size))),(numX-1.0)); //bl x grid pos
-    int xg1 = std::min(xg0+1,numX-1); //br x grid pos
+    int x0 = std::min(std::floor((xi-x_offset)*cs_1),numX-1.0);
+    double tx = ((xi-x_offset)-x0*cell_size)*cs_1;
+    int x1 = std::min(x0+1,numX-1); //br x grid pos
 
-    int yg0 = std::min(std::floor((y_trans-y_offset)/(cell_size)),numY-1.0);
-    int yg1 = std::min(yg0+1,numY-1);
+    int y0 = std::min(std::floor((yi-y_offset)*cs_1),numY-1.0);
+    double ty = ((yi-y_offset)- y0*cell_size)*cs_1;
+    int y1 = std::min(y0+1,numY-1);
     
+    double sx = 1.0-tx;
+    double sy = 1.0-ty;
 
+    double interpolation = sx*sy*(sample_field[x0][y0]) + tx*sy*(sample_field[x1][y0]) + tx*ty*(sample_field[x1][y1]) + sx*ty*(sample_field[x0][y1]);
 
+    return interpolation;
 }
 
 
