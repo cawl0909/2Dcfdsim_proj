@@ -51,8 +51,8 @@ int main(int argc, char *argv[])
 
     // GUI Paramters
     const float PIXEL_SCALE = 32.0;
-    const size_t WINDOW_SIZE_X = (GRID_SIZE_X+2)*PIXEL_SCALE;
-    const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y+2)*PIXEL_SCALE;
+    const size_t WINDOW_SIZE_X = (GRID_SIZE_X)*PIXEL_SCALE;
+    const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y)*PIXEL_SCALE;
 
     const char WINDOW_NAME[] = "CFD SIM";
 
@@ -123,10 +123,14 @@ int main(int argc, char *argv[])
         {
             for(size_t j = 1; j < GRID_SIZE_Y+2-1; j++)
             {
-                int ty = abs(j-(GRID_SIZE_Y+2-1));
+                int ty = abs(j-(GRID_SIZE_Y+2-1)); //transforminf from the top left reference frame of the SDL renderer to the cartesian system in sim
                 int scale = std::round(255*(abs(fluidobj->get_divergence(i,ty))));
+
+                int win_x = i -1;
+                int win_y = j -1;
+
                 SDL_SetRenderDrawColor(renderer,scale,0,0,255);
-                SDL_FRect temp_rect = {i*PIXEL_SCALE,j*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
+                SDL_FRect temp_rect = {win_x*PIXEL_SCALE,win_y*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
                 SDL_RenderFillRect(renderer,&temp_rect);
                 //SDL_RenderPoint(renderer,i,j);
             }

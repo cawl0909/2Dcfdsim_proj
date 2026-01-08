@@ -3,6 +3,8 @@
 #include <cmath>
 #include <iostream>
 #include <random>
+#include <string>
+#include <cmath>
 
 #include "Fluid.h"
 
@@ -93,6 +95,72 @@ void Fluid::solveIncompressability(int numIterations, double dt)
     }
 }
 
+void Fluid::border_velocity_extrapolate() 
+{
+    for(int i = 0; i<numX;i++)
+    {
+        u_grid[i][0] =  u_grid[i][1]; // bottom ghost objects get the velocities from the proper cell just above
+        u_grid[i][numY-1] = u_grid[i][numY-2];
+    }
+    for(int j = 0; j<numY;j++)
+    {
+        v_grid[0][j] = v_grid[1][j];
+        v_grid[numX-1][j] = v_grid[numX-2][j];
+    }
+}
+
+double Fluid::grid_interpolation(double x, double y, std::string& field)
+{
+
+    //For me to remember
+    // This would be a basic 2d bilinear interpolation but there needs to be some extra logic because the 
+    // u,v and smoke fields are offset by different amounts to the typical cartesian grid points UGH!!! but MAC grids make life so much easier
+    // I guess I'll slog through it 
+
+
+
+    double one_over_cs = 1/cell_size;
+    double half_cs = cell_size/2;
+
+    double x_offset = 0.0;
+    double y_offset = 0.0;
+
+    int x_trans = std::max(std::min(x,numX*cell_size),cell_size);
+    int y_trans = std::max(std::min(y,numY*cell_size),cell_size);
+
+    std::vector<std::vector<double>> sample_field;
+
+    if(field == "u")
+    {
+        sample_field = u_grid;
+        y_offset = half_cs;
+    }
+    else if (field == "v")
+    {
+        sample_field = v_grid;
+        x_offset = half_cs;
+    }
+    else if(field == "s")
+    {
+        sample_field =  mass;
+        x_offset = half_cs;
+        y_offset = half_cs;
+    }
+
+    int xg0 = std::min(std::floor(((x_trans-x_offset)/(cell_size))),(numX-1.0)); //bl x grid pos
+    int xg1 = std::min(xg0+1,numX-1); //br x grid pos
+
+    int yg0 = std::min(std::floor((y_trans-y_offset)/(cell_size)),numY-1.0);
+    int yg1 = std::min(yg0+1,numY-1);
+    
+
+
+}
+
+
+
+
+// -------------------------------------------------------------------------
 
 void Fluid::randomise_velocities(std::mt19937& generator)
 {

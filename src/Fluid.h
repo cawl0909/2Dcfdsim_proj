@@ -5,6 +5,7 @@
 #include <cmath>
 #include <iostream>
 #include <random>
+#include <string>
 
 #include "vectors.h"
 
@@ -35,13 +36,15 @@ public:
 
     Fluid(double _density, int _numX, int _numY, double _h, double _over_relaxation);
 
-    double get_divergence(int x, int y);
+    double get_divergence(int x, int y); // helper function to get the divergence of the flow field
 
-    void integrate(double dt, double gravity);
+    void integrate(double dt, double gravity); // eulerian integration step to add gravity to all v veloicities in the grid
 
-    void solveIncompressability(int numIterations, double dt);
+    void solveIncompressability(int numIterations, double dt); // solves pressure and veloicties by setting divergence to 0 of all real cells because of incompressability div.(u,v)  = 0
 
+    void border_velocity_extrapolate(); // need to use ghost edge cells to deal with the simulated region margins, so appropriate veloicties are extrapolated from neighbours
 
+    double grid_interpolation(double x, double y, std::string& field); //does a bivariate interpolation on a chosen field for advection fields
 
     // Test functions
 
