@@ -36,6 +36,8 @@ public:
 
     Fluid(double _density, int _numX, int _numY, double _h, double _over_relaxation);
 
+    void simulate(double dt, double grav, double num_iterations);
+
     double get_divergence(int x, int y); // helper function to get the divergence of the flow field
 
     void integrate(double dt, double gravity); // eulerian integration step to add gravity to all v veloicities in the grid
@@ -46,6 +48,13 @@ public:
 
     double grid_interpolation(double x, double y, std::string field); //does a bivariate interpolation on a chosen field for advection fields
 
+    double get_avg_u(int x, int y);
+
+    double get_avg_v(int x, int y);
+    
+    void advect_velocity(double dt);
+
+    void reset_pressure();
     // Test functions
 
 

@@ -163,8 +163,75 @@ double Fluid::grid_interpolation(double x, double y, std::string field)
     return interpolation;
 }
 
+double Fluid::get_avg_u(int x, int y)
+{
+    double total = u_grid[x][y] + u_grid[x-1][y] + u_grid[x+1][y-1] + u_grid[x+1][y];
+    return (total/4);
+}
 
+double Fluid::get_avg_v(int x, int y)
+{
+    double total = v_grid[x][y] + v_grid[x-1][y] + v_grid[x-1][y+1] + v_grid[x][y+1];
+    return (total/4);
+}
 
+void Fluid::advect_velocity(double dt)
+{
+    new_u_grid = u_grid;
+    new_v_grid = v_grid;
+
+    double c2 = cell_size/2;
+
+    for(int i = 1; i < numX-1;i++)
+    {
+        for(int j = 1; j< numY-1;j++)
+        {
+            if((solid[i][j] != 0) && (solid[i-1][j] != 0) && (j < numY-1))
+            {
+                double sp_x = i*cell_size;    //sim pos not grid pos
+                double sp_y = j*cell_size + c2;
+
+                double u = u_grid[i][j];
+                double v = get_avg_v(i,j);
+
+                sp_x = sp_x - (dt*u);
+                sp_y = sp_y - (dt*v);
+
+                u = grid_interpolation(sp_x,sp_y,"u");
+                new_u_grid[i][j] = u;
+            }
+
+            if((solid[i][j] != 0) && (solid[i][j-1] != 0) &&(i<numX-1))
+            {
+                double sp_x = i*cell_size + c2;
+                double sp_y = j*cell_size;
+
+                double u = get_avg_v(i,j);
+                double v = v_grid[i][j];
+
+                sp_x = sp_x - (dt*u);
+                sp_y = sp_y - (dt*v);
+
+                v = grid_interpolation(sp_x,sp_y,"v");
+                new_v_grid[i][j] = v;
+            }
+        }
+    }
+
+    u_grid = new_u_grid;
+    v_grid = new_v_grid;
+}
+
+void Fluid::reset_pressure()
+{
+    for(int i = 0; i<numX;i++)
+    {
+        for(int j = 0; j<numY;j++)
+        {
+            pressure[i][j] = 0.0;
+        }
+    }
+}
 
 // -------------------------------------------------------------------------
 
@@ -185,4 +252,16 @@ void Fluid::randomise_velocities(std::mt19937& generator)
             v_grid[i][j] = dist(generator);
         }
     }
+}
+
+// ------------------------------------------------------------------------
+
+void Fluid::simulate(double dt, double grav, double num_iterations)
+{
+    integrate(dt,grav);
+
+    reset_pressure();
+    solveIncompressability(num_iterations,dt);
+    border_velocity_extrapolate();
+    advect_velocity(dt);
 }
