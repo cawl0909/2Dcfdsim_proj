@@ -22,7 +22,7 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer)
 int main(int argc, char *argv[])
 {
     // Simulation Paramters
-    const size_t GRID_SIZE_X = 200;
+    const size_t GRID_SIZE_X = 250;
     const size_t GRID_SIZE_Y = 150;
     const double CELL_LENGTH = 0.1;
     constexpr double TIME_STEP = 1.0/60.0;
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 
 
     // Setting up fluid sim bc and setup
-    double inlet_velocity = 2.0;
+    double inlet_velocity = 5.0;
     for(int i =0; i<fluidobj->numX;i++)
     {
         for(int j = 0; j<fluidobj->numY;j++)
@@ -116,6 +116,26 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    SDL_Texture* field_texture = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_ARGB8888,
+        SDL_TEXTUREACCESS_STREAMING,
+        static_cast<int>(GRID_SIZE_X),
+        static_cast<int>(GRID_SIZE_Y)
+    );
+
+    if(field_texture == nullptr)
+    {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,"INIT ERROR","SDL FAILED TO INIT FIELD TEXTURE",nullptr);
+        cleanup(window,renderer);
+        return -1;
+    }
+
+    SDL_SetTextureScaleMode(field_texture, SDL_SCALEMODE_NEAREST);
+    SDL_SetTextureBlendMode(field_texture, SDL_BLENDMODE_NONE);
+
+    std::vector<Uint32> field_pixels(GRID_SIZE_X * GRID_SIZE_Y, 0xFFFFFFFFu);
+
 
     // Main Event Loop
 
@@ -148,38 +168,43 @@ int main(int argc, char *argv[])
         //SDL_SetRenderDrawColor(renderer,255,0,0,SDL_ALPHA_OPAQUE);
         //SDL_RenderLine(renderer,0,0,WINDOW_SIZE_X,WINDOW_SIZE_Y);
         //SDL_RenderPoint(renderer,0,0);
-        size_t sim_tick1 = SDL_GetTicks();
+        //size_t sim_tick1 = SDL_GetTicks();
         fluidobj->simulate(TIME_STEP,0.0,40);
         //std::cout<<"Frame count: "<<frame_count<<std::endl;
-        std::cout<<"Sim Time(ms) = "<<(SDL_GetTicks()-sim_tick1)<<std::endl;
+        //const size_t sim_ms = (SDL_GetTicks() - sim_tick1);
+        //std::cout<<"Sim Time(ms) = "<< sim_ms <<std::endl;
 
-        size_t  draw_tick1 = SDL_GetTicks();
-        for(size_t i = 1; i < GRID_SIZE_X+2-1; i++) //GSX + 2 -1
+        const size_t draw_tick1 = SDL_GetTicks();
+
+        for(int i = 1; i < GRID_SIZE_X + 2 - 1; i++)
         {
-            int win_x = i-1;
-            for(size_t j = 1; j < GRID_SIZE_Y+2-1; j++)
+            const int win_x = i - 1;
+            for(int j = 1; j < GRID_SIZE_Y + 2 - 1; j++)
             {
-                int win_y  = j-1;
-                int ty = abs(j-(GRID_SIZE_Y+2-1)); //transforminf from the top left reference frame of the SDL renderer to the cartesian system in sim
-                int smoke_per = 255*((fluidobj->mass[i][j]));
-                int smoke_c = smoke_per;
-                SDL_SetRenderDrawColor(renderer,smoke_c,smoke_c,smoke_c,255);
-                SDL_FRect temp_rect = {win_x*PIXEL_SCALE,win_y*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
-                SDL_RenderFillRect(renderer,&temp_rect);
+                const int win_y = j - 1;
+                const int ty = abs((j) - (GRID_SIZE_Y + 2 - 1));
 
-                if(fluidobj->solid[i][ty] == 0.0)
-                {
-                    SDL_Color solid_map = {255,0,0,255};
-                    SDL_SetRenderDrawColor(renderer,solid_map.r,solid_map.g,solid_map.b,solid_map.a);
-                    SDL_FRect temp_rect2 = {win_x*PIXEL_SCALE,win_y*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
-                    SDL_RenderFillRect(renderer,&temp_rect2);
-                }
+                const double smoke = fluidobj->mass[i][j];
+                const int smoke_c = std::clamp(smoke * 255.0, 0.0, 255.0);
+                const Uint32 gray = 0xFF000000u | (static_cast<Uint32>(smoke_c) << 16) | (static_cast<Uint32>(smoke_c) << 8) | static_cast<Uint32>(smoke_c);
+                const Uint32 red  = 0xFFFF0000u;
+
+                field_pixels[win_y * GRID_SIZE_X + win_x] = (fluidobj->solid[i][ty] == 0.0) ? red : gray;
             }
         }
+
+        SDL_UpdateTexture(field_texture, nullptr, field_pixels.data(), static_cast<int>(GRID_SIZE_X * sizeof(Uint32)));
+
+        SDL_FRect dst = {0.0f, 0.0f, static_cast<float>(WINDOW_SIZE_X), static_cast<float>(WINDOW_SIZE_Y)};
+        SDL_RenderTexture(renderer, field_texture, nullptr, &dst);
         SDL_RenderPresent(renderer);
+
+        //const size_t draw_ms = (SDL_GetTicks() - draw_tick1);
+        //std::cout<<"Draw Time(ms) = "<< draw_ms <<std::endl;
+
         size_t current_tick = SDL_GetTicks();
         size_t tick_delta = current_tick-start_tick;
-        std::cout<<"Draw time(ms): "<<tick_delta<<std::endl;
+        //std::cout<<"Frame Time(ms) = "<<tick_delta<<std::endl;
         if(tick_delta < TARGET_FRAME_TIME)
         {
             SDL_Delay(TARGET_FRAME_TIME-tick_delta);
@@ -187,6 +212,7 @@ int main(int argc, char *argv[])
 
     }
 
+    SDL_DestroyTexture(field_texture);
     cleanup(window,renderer);
     return 0;
 }
