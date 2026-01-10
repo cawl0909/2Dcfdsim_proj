@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     // Simulation Paramters
     const size_t GRID_SIZE_X = 150;
     const size_t GRID_SIZE_Y = 100;
-    const double CELL_LENGTH = 1.0;
+    const double CELL_LENGTH = 0.1;
     constexpr double TIME_STEP = 1.0/60.0;
     const double OVER_RELAXATION = 1.7;
     std::random_device rd;
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 
 
     // Setting up fluid sim bc and setup
-    double inlet_velocity = 20.0;
+    double inlet_velocity = 2.0;
     for(int i =0; i<fluidobj->numX;i++)
     {
         for(int j = 0; j<fluidobj->numY;j++)
@@ -56,18 +56,28 @@ int main(int argc, char *argv[])
             }
         }
     }
-    double inlet_width = 10.0;
-    double fluid_height = (fluidobj->numY)*CELL_LENGTH;
-    double mid_point  = fluid_height*0.5;
-    int bot_j =  std::floor((mid_point - inlet_width*0.5)/CELL_LENGTH);
-    int top_j =  std::floor((mid_point + 0.5*inlet_width)/CELL_LENGTH);
-    std::cout<<bot_j<<","<<top_j<<std::endl;
-    for(int j = bot_j; j<top_j;j++)
+    // Define inlet band as a fraction of the vertical cell count (independent of CELL_LENGTH)
+    double inlet_fraction = 0.1; // 10% of the channel height
+    double inlet_cells = inlet_fraction * static_cast<double>(fluidobj->numY);
+    int bot_j = static_cast<int>(std::floor(0.5 * fluidobj->numY - 0.5 * inlet_cells));
+    int top_j = static_cast<int>(std::floor(0.5 * fluidobj->numY + 0.5 * inlet_cells));
+
+    // Clamp to valid index range to avoid out-of-bounds when CELL_LENGTH or grid size changes
+    bot_j = std::max(bot_j, 0);
+    top_j = std::min(top_j, static_cast<int>(fluidobj->numY));
+
+    for(int j = bot_j; j < top_j; ++j)
     {
         fluidobj->mass[0][j] = 0.0;
     }
 
-    fluidobj->set_circle_obstacle(35,mid_point,10);
+    // Place the circular obstacle using normalized coordinates so it scales with CELL_LENGTH
+    double domain_height = static_cast<double>(fluidobj->i_numY) * CELL_LENGTH;
+    double domain_width  = static_cast<double>(fluidobj->i_numX) * CELL_LENGTH;
+    double obstacle_x = 0.3 * domain_width;   // 
+    double obstacle_y = 0.51 * domain_height;  // mid-height
+    double obstacle_radius = 0.12 * domain_height; // radius as fraction of height
+    fluidobj->set_circle_obstacle(obstacle_x, obstacle_y, obstacle_radius);
 
     // GUI Paramters
     const float PIXEL_SCALE = 8.0;
