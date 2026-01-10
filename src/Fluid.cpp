@@ -5,6 +5,8 @@
 #include <random>
 #include <string>
 #include <cmath>
+#include <chrono>
+#include <thread>
 
 #include "Fluid.h"
 
@@ -215,9 +217,10 @@ void Fluid::advect_velocity(double dt)
             }
         }
     }
-
-    u_grid = new_u_grid;
-    v_grid = new_v_grid;
+    u_grid.swap(new_u_grid);
+    v_grid.swap(new_v_grid);
+    //u_grid = new_u_grid;
+    //v_grid = new_v_grid;
 }
 
 void Fluid::advect_smoke(double dt)
@@ -243,7 +246,8 @@ void Fluid::advect_smoke(double dt)
         }
     }
 
-    mass = new_mass;
+    //mass = new_mass;
+    mass.swap(new_mass);
 }
 
 void Fluid::reset_pressure()
@@ -295,18 +299,18 @@ void Fluid::simulate(double dt, double grav, double num_iterations)
 
 void Fluid::set_circle_obstacle(double x, double y, double radius)
 {
+    const double radius_2 = radius*radius;
     for(int i = 1; i<numX-1;i++)
     {
         for(int j =1; j<numY-1;j++)
         {
-            double it_x = i*cell_size +cell_size/2;
-            double it_y = j*cell_size +cell_size/2;
+            const double it_x = (i - 1.0) * cell_size + cell_size * 0.5;
+            const double it_y = (j - 1.0) * cell_size + cell_size * 0.5;
 
-            double dx = it_x-x;
-            double dy = it_y-y;
-
-            double d_distance = std::sqrt(std::pow(dx,2) + std::pow(dy,2));
-            if(d_distance <= radius)
+            const double dx = it_x - x;
+            const double dy = it_y - y;
+            const double d_sq = dx * dx + dy * dy;
+            if(d_sq <= radius_2)
             {
                 solid[i][j] = 0.0;
             }

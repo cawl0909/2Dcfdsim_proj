@@ -4,6 +4,8 @@
 #include <random>
 #include <memory>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -22,11 +24,11 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer)
 int main(int argc, char *argv[])
 {
     // Simulation Paramters
-    const size_t GRID_SIZE_X = 250;
-    const size_t GRID_SIZE_Y = 150;
+    const size_t GRID_SIZE_X = 220;
+    const size_t GRID_SIZE_Y = 90;
     const double CELL_LENGTH = 0.1;
     constexpr double TIME_STEP = 1.0/60.0;
-    const double OVER_RELAXATION = 1.8;
+    const double OVER_RELAXATION = 1.9;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> distrib(1,255);
@@ -38,7 +40,7 @@ int main(int argc, char *argv[])
 
 
     // Setting up fluid sim bc and setup
-    double inlet_velocity = 5.0;
+    double inlet_velocity = 10.0;
     for(int i =0; i<fluidobj->numX;i++)
     {
         for(int j = 0; j<fluidobj->numY;j++)
@@ -74,10 +76,12 @@ int main(int argc, char *argv[])
     // Place the circular obstacle using normalized coordinates so it scales with CELL_LENGTH
     double domain_height = static_cast<double>(fluidobj->i_numY) * CELL_LENGTH;
     double domain_width  = static_cast<double>(fluidobj->i_numX) * CELL_LENGTH;
-    double obstacle_x = 0.3 * domain_width;   // 
-    double obstacle_y = 0.51 * domain_height;  // mid-height
+    double obstacle_x = 0.2 * domain_width;   // 
+    double obstacle_y = 0.5 * domain_height;  // mid-height
     double obstacle_radius = 0.12 * domain_height; // radius as fraction of height
     fluidobj->set_circle_obstacle(obstacle_x, obstacle_y, obstacle_radius);
+
+
 
     // GUI Paramters
     const float PIXEL_SCALE = 4.0;
@@ -183,13 +187,20 @@ int main(int argc, char *argv[])
             {
                 const int win_y = j - 1;
                 const int ty = abs((j) - (GRID_SIZE_Y + 2 - 1));
-
+ 
                 const double smoke = fluidobj->mass[i][j];
                 const int smoke_c = std::clamp(smoke * 255.0, 0.0, 255.0);
                 const Uint32 gray = 0xFF000000u | (static_cast<Uint32>(smoke_c) << 16) | (static_cast<Uint32>(smoke_c) << 8) | static_cast<Uint32>(smoke_c);
                 const Uint32 red  = 0xFFFF0000u;
 
-                field_pixels[win_y * GRID_SIZE_X + win_x] = (fluidobj->solid[i][ty] == 0.0) ? red : gray;
+                if(fluidobj->solid[i][ty] == 0.0)
+                {
+                    field_pixels[win_y*GRID_SIZE_X+win_x] = red;
+                }
+                else
+                {
+                    field_pixels[win_y*GRID_SIZE_X+win_x] = gray;
+                }
             }
         }
 
