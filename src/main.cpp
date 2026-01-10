@@ -148,10 +148,12 @@ int main(int argc, char *argv[])
         //SDL_SetRenderDrawColor(renderer,255,0,0,SDL_ALPHA_OPAQUE);
         //SDL_RenderLine(renderer,0,0,WINDOW_SIZE_X,WINDOW_SIZE_Y);
         //SDL_RenderPoint(renderer,0,0);
-
+        size_t sim_tick1 = SDL_GetTicks();
         fluidobj->simulate(TIME_STEP,0.0,40);
         //std::cout<<"Frame count: "<<frame_count<<std::endl;
+        std::cout<<"Sim Time(ms) = "<<(SDL_GetTicks()-sim_tick1)<<std::endl;
 
+        size_t  draw_tick1 = SDL_GetTicks();
         for(size_t i = 1; i < GRID_SIZE_X+2-1; i++) //GSX + 2 -1
         {
             int win_x = i-1;
@@ -177,6 +179,7 @@ int main(int argc, char *argv[])
         SDL_RenderPresent(renderer);
         size_t current_tick = SDL_GetTicks();
         size_t tick_delta = current_tick-start_tick;
+        std::cout<<"Draw time(ms): "<<tick_delta<<std::endl;
         if(tick_delta < TARGET_FRAME_TIME)
         {
             SDL_Delay(TARGET_FRAME_TIME-tick_delta);
