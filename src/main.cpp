@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     const size_t GRID_SIZE_Y = 150;
     const double CELL_LENGTH = 0.1;
     constexpr double TIME_STEP = 1.0/60.0;
-    const double OVER_RELAXATION = 1.7;
+    const double OVER_RELAXATION = 1.8;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> distrib(1,255);
@@ -152,23 +152,22 @@ int main(int argc, char *argv[])
         fluidobj->simulate(TIME_STEP,0.0,40);
         //std::cout<<"Frame count: "<<frame_count<<std::endl;
 
-        for(size_t i = 1; i < GRID_SIZE_X+2-1; i++)
+        for(size_t i = 1; i < GRID_SIZE_X+2-1; i++) //GSX + 2 -1
         {
+            int win_x = i-1;
             for(size_t j = 1; j < GRID_SIZE_Y+2-1; j++)
             {
-                int win_x = i-1;
                 int win_y  = j-1;
                 int ty = abs(j-(GRID_SIZE_Y+2-1)); //transforminf from the top left reference frame of the SDL renderer to the cartesian system in sim
-                int smoke_per = 255*((fluidobj->mass[i][j])/1.0);
-                int smoke_c = std::clamp(smoke_per,0,255);
+                int smoke_per = 255*((fluidobj->mass[i][j]));
+                int smoke_c = smoke_per;
                 SDL_SetRenderDrawColor(renderer,smoke_c,smoke_c,smoke_c,255);
                 SDL_FRect temp_rect = {win_x*PIXEL_SCALE,win_y*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
                 SDL_RenderFillRect(renderer,&temp_rect);
 
-                SDL_Color solid_map = {0,0,0,255};
                 if(fluidobj->solid[i][ty] == 0.0)
                 {
-                    solid_map = SDL_Color{255,0,0,255};
+                    SDL_Color solid_map = {255,0,0,255};
                     SDL_SetRenderDrawColor(renderer,solid_map.r,solid_map.g,solid_map.b,solid_map.a);
                     SDL_FRect temp_rect2 = {win_x*PIXEL_SCALE,win_y*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
                     SDL_RenderFillRect(renderer,&temp_rect2);

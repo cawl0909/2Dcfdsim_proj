@@ -110,16 +110,13 @@ void Fluid::border_velocity_extrapolate()
     }
 }
 
-double Fluid::grid_interpolation(double x, double y, std::string field)
+double Fluid::grid_interpolation(double x, double y, Field field)
 {
 
     //For me to remember
     // This would be a basic 2d bilinear interpolation but there needs to be some extra logic because the 
     // u,v and smoke fields are offset by different amounts to the typical cartesian grid points UGH!!! but MAC grids make life so much easier
     // I guess I'll slog through it 
-
-
-
     double cs_1 = 1.0/cell_size;
     double cs_2 = cell_size*0.5;
 
@@ -129,23 +126,22 @@ double Fluid::grid_interpolation(double x, double y, std::string field)
     double xi = std::max(std::min(x,numX*cell_size),cell_size);
     double yi = std::max(std::min(y,numY*cell_size),cell_size);
 
-    std::vector<std::vector<double>>* sample_field =  nullptr;
-
-    if(field == "u")
+    const std::vector<std::vector<double>>* sample_field = nullptr;
+    switch (field)
     {
-        sample_field = &u_grid;
-        y_offset = cs_2;
-    }
-    else if (field == "v")
-    {
-        sample_field = &v_grid;
-        x_offset = cs_2;
-    }
-    else if(field == "s")
-    {
-        sample_field =  &mass;
-        x_offset = cs_2;
-        y_offset = cs_2;
+        case Field::U:
+            sample_field = &u_grid;
+            y_offset = cs_2;
+            break;
+        case Field::V:
+            sample_field = &v_grid;
+            x_offset = cs_2;
+            break;
+        case Field::Smoke:
+            sample_field = &mass;
+            x_offset = cs_2;
+            y_offset = cs_2;
+            break;
     }
 
     int x0 = std::min(std::floor((xi-x_offset)*cs_1),numX-1.0);
@@ -198,7 +194,7 @@ void Fluid::advect_velocity(double dt)
                 sp_x = sp_x - (dt*u);
                 sp_y = sp_y - (dt*v);
 
-                u = grid_interpolation(sp_x,sp_y,"u");
+                u = grid_interpolation(sp_x,sp_y,Field::U);
                 new_u_grid[i][j] = u;
             }
 
@@ -214,7 +210,7 @@ void Fluid::advect_velocity(double dt)
                 sp_x = sp_x - (dt*u);
                 sp_y = sp_y - (dt*v);
 
-                v = grid_interpolation(sp_x,sp_y,"v");
+                v = grid_interpolation(sp_x,sp_y,Field::V);
                 new_v_grid[i][j] = v;
             }
         }
@@ -242,7 +238,7 @@ void Fluid::advect_smoke(double dt)
                 double x = (i*cell_size) + c2 - dt*u;
                 double y = (j*cell_size) + c2 - dt*v;
 
-                new_mass[i][j] = grid_interpolation(x,y,"s");
+                new_mass[i][j] = grid_interpolation(x,y,Field::Smoke);
             }
         }
     }

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <algorithm>
 
 #include "vectors.h"
 
@@ -46,7 +47,14 @@ public:
 
     void border_velocity_extrapolate(); // need to use ghost edge cells to deal with the simulated region margins, so appropriate veloicties are extrapolated from neighbours
 
-    double grid_interpolation(double x, double y, std::string field); //does a bivariate interpolation on a chosen field for advection fields
+    enum class Field
+    {
+        U,
+        V,
+        Smoke
+    };
+
+    double grid_interpolation(double x, double y, Field field); // does a bivariate interpolation on a chosen field for advection
 
     double get_avg_u(int x, int y);
 
