@@ -26,7 +26,7 @@ Fluid::Fluid(double _density, int _numX, int _numY, double _h, double _over_rela
     new_v_grid = std::vector<std::vector<double>>(numX,std::vector<double>(numY,0));
     pressure = std::vector<std::vector<double>>(numX,std::vector<double>(numY,0));
     solid = std::vector<std::vector<double>>(numX,std::vector<double>(numY,1.0));
-    mass = std::vector<std::vector<double>>(numX,std::vector<double>(numY,0));
+    mass = std::vector<std::vector<double>>(numX,std::vector<double>(numY,1.0));
     new_mass = std::vector<std::vector<double>>(numX,std::vector<double>(numY,0));
 
 }
@@ -59,7 +59,6 @@ void Fluid::integrate(double dt, double gravity)
 void Fluid::solveIncompressability(int numIterations, double dt)
 {
     double const_param = (fluid_density*cell_size)/dt;
-
     for(int iter = 0; iter<numIterations;iter++)
     {
         for(int i = 1; i<numX-1;i++)
@@ -128,21 +127,21 @@ double Fluid::grid_interpolation(double x, double y, std::string field)
     double xi = std::max(std::min(x,numX*cell_size),cell_size);
     double yi = std::max(std::min(y,numY*cell_size),cell_size);
 
-    std::vector<std::vector<double>> sample_field;
+    std::vector<std::vector<double>>* sample_field =  nullptr;
 
     if(field == "u")
     {
-        sample_field = u_grid;
+        sample_field = &u_grid;
         y_offset = cs_2;
     }
     else if (field == "v")
     {
-        sample_field = v_grid;
+        sample_field = &v_grid;
         x_offset = cs_2;
     }
     else if(field == "s")
     {
-        sample_field =  mass;
+        sample_field =  &mass;
         x_offset = cs_2;
         y_offset = cs_2;
     }
@@ -158,7 +157,7 @@ double Fluid::grid_interpolation(double x, double y, std::string field)
     double sx = 1.0-tx;
     double sy = 1.0-ty;
 
-    double interpolation = sx*sy*(sample_field[x0][y0]) + tx*sy*(sample_field[x1][y0]) + tx*ty*(sample_field[x1][y1]) + sx*ty*(sample_field[x0][y1]);
+    double interpolation = sx*sy*((*sample_field)[x0][y0]) + tx*sy*((*sample_field)[x1][y0]) + tx*ty*((*sample_field)[x1][y1]) + sx*ty*((*sample_field)[x0][y1]);
 
     return interpolation;
 }
@@ -290,4 +289,28 @@ void Fluid::simulate(double dt, double grav, double num_iterations)
     solveIncompressability(num_iterations,dt);
     border_velocity_extrapolate();
     advect_velocity(dt);
+    advect_smoke(dt);
+}
+
+// Obstacle ---------------------------------------------------------------
+
+void Fluid::set_circle_obstacle(double x, double y, double radius)
+{
+    for(int i = 1; i<numX-1;i++)
+    {
+        for(int j =1; j<numY-1;j++)
+        {
+            double it_x = i*cell_size +cell_size/2;
+            double it_y = j*cell_size +cell_size/2;
+
+            double dx = it_x-x;
+            double dy = it_y-y;
+
+            double d_distance = std::sqrt(std::pow(dx,2) + std::pow(dy,2));
+            if(d_distance <= radius)
+            {
+                solid[i][j] = 0.0;
+            }
+        }
+    }
 }

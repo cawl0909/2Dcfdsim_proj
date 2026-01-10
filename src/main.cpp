@@ -3,6 +3,7 @@
 #include <string>
 #include <random>
 #include <memory>
+#include <algorithm>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -24,8 +25,8 @@ int main(int argc, char *argv[])
     const size_t GRID_SIZE_X = 100;
     const size_t GRID_SIZE_Y = 50;
     const double CELL_LENGTH = 1.0;
-    constexpr double TIME_STEP = 1.0/60;
-    const double OVER_RELAXATION = 1.7;
+    constexpr double TIME_STEP = 1.0/60.0;
+    const double OVER_RELAXATION = 1.9;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> distrib(1,255);
@@ -33,21 +34,40 @@ int main(int argc, char *argv[])
     // Fluid Class initialising
 
     std::unique_ptr<Fluid> fluidobj = std::make_unique<Fluid>(1000.0,GRID_SIZE_X,GRID_SIZE_Y,CELL_LENGTH,OVER_RELAXATION);
-    fluidobj->randomise_velocities(gen);
-    for(size_t i = 0; i < GRID_SIZE_X+2; i++)
+    //fluidobj->randomise_velocities(gen);
+
+
+    // Setting up fluid sim bc and setup
+    double inlet_velocity = 2.0;
+    for(int i =0; i<fluidobj->numX;i++)
     {
-        for(size_t j = 0; j < GRID_SIZE_Y+2; j++)
+        for(int j = 0; j<fluidobj->numY;j++)
         {
-            if(i == 0 || i == 21 || j == 0 || j == 21)
+            double tS = 1.0;
+            if(i == 0 || j == 0 || j == fluidobj->numY-1)
             {
-                fluidobj->solid[i][j] = 0;
+                tS = 0.0;
             }
-            else
+            fluidobj->solid[i][j] = tS;
+
+            if(i == 1)
             {
-                fluidobj->solid[i][j] = 1;
+                fluidobj->u_grid[i][j] = inlet_velocity;
             }
         }
     }
+    double inlet_width = 5.0;
+    double fluid_height = (fluidobj->numY)*CELL_LENGTH;
+    double mid_point  = fluid_height*0.5;
+    int bot_j =  std::floor((mid_point - inlet_width*0.5)/CELL_LENGTH);
+    int top_j =  std::floor((mid_point + 0.5*inlet_width)/CELL_LENGTH);
+    std::cout<<bot_j<<","<<top_j<<std::endl;
+    for(int j = bot_j; j<top_j;j++)
+    {
+        fluidobj->mass[0][j] = 0.0;
+    }
+
+    fluidobj->set_circle_obstacle(15,mid_point,5);
 
     // GUI Paramters
     const float PIXEL_SCALE = 16.0;
@@ -56,7 +76,7 @@ int main(int argc, char *argv[])
 
     const char WINDOW_NAME[] = "CFD SIM";
 
-    const size_t TARGET_FPS = 6;
+    const size_t TARGET_FPS = 60;
     const size_t TARGET_FRAME_TIME = 1000/TARGET_FPS;
 
     // Random 
@@ -90,12 +110,13 @@ int main(int argc, char *argv[])
     // Main Event Loop
 
     bool running = true;
-
+    int frame_count = 0;
 
     size_t start_tick;
     while (running) 
     {
         start_tick = SDL_GetTicks();
+        frame_count +=1;
         SDL_Event e;
         while (SDL_PollEvent(&e))
         {
@@ -106,11 +127,7 @@ int main(int argc, char *argv[])
             }
             else if (e.type == SDL_EVENT_KEY_DOWN)
             {
-                std::cout<<"Key pressed"<<SDL_GetKeyName(e.key.key)<<std::endl;
-                //fluidobj->solveIncompressability(50,TIME_STEP);
-                //std::cout<<fluidobj->get_divergence(2,2)<<std::endl;
-                std::cout<<fluidobj->u_grid[1][1]<<std::endl;
-                std::cout<<fluidobj->grid_interpolation(1.005,1.500001,"u")<<std::endl;
+                std::cout<<"Key pressed"<<SDL_GetKeyName(e.key.key)<<" Frame: "<<frame_count<<std::endl;
                 break;
             }
             
@@ -118,23 +135,34 @@ int main(int argc, char *argv[])
         SDL_SetRenderDrawColor(renderer,255,255,255,255);
         SDL_RenderClear(renderer);
         
-        SDL_SetRenderDrawColor(renderer,255,0,0,SDL_ALPHA_OPAQUE);
+        //SDL_SetRenderDrawColor(renderer,255,0,0,SDL_ALPHA_OPAQUE);
         //SDL_RenderLine(renderer,0,0,WINDOW_SIZE_X,WINDOW_SIZE_Y);
-        SDL_RenderPoint(renderer,0,0);
+        //SDL_RenderPoint(renderer,0,0);
+
+        fluidobj->simulate(TIME_STEP,0.0,40);
+        std::cout<<"Frame count: "<<frame_count<<std::endl;
+
         for(size_t i = 1; i < GRID_SIZE_X+2-1; i++)
         {
             for(size_t j = 1; j < GRID_SIZE_Y+2-1; j++)
             {
+                int win_x = i-1;
+                int win_y  = j-1;
                 int ty = abs(j-(GRID_SIZE_Y+2-1)); //transforminf from the top left reference frame of the SDL renderer to the cartesian system in sim
-                int scale = std::round(255*(abs(fluidobj->get_divergence(i,ty))));
-
-                int win_x = i -1;
-                int win_y = j -1;
-
-                SDL_SetRenderDrawColor(renderer,scale,0,0,255);
+                int smoke_per = 255*((fluidobj->mass[i][j])/1.0);
+                int smoke_c = std::clamp(smoke_per,0,255);
+                SDL_SetRenderDrawColor(renderer,smoke_c,smoke_c,smoke_c,255);
                 SDL_FRect temp_rect = {win_x*PIXEL_SCALE,win_y*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
                 SDL_RenderFillRect(renderer,&temp_rect);
-                //SDL_RenderPoint(renderer,i,j);
+
+                SDL_Color solid_map = {0,0,0,255};
+                if(fluidobj->solid[i][ty] == 0.0)
+                {
+                    solid_map = SDL_Color{255,0,0,255};
+                    SDL_SetRenderDrawColor(renderer,solid_map.r,solid_map.g,solid_map.b,solid_map.a);
+                    SDL_FRect temp_rect2 = {win_x*PIXEL_SCALE,win_y*PIXEL_SCALE,PIXEL_SCALE,PIXEL_SCALE};
+                    SDL_RenderFillRect(renderer,&temp_rect2);
+                }
             }
         }
         SDL_RenderPresent(renderer);

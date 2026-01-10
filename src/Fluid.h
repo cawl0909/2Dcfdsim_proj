@@ -57,6 +57,13 @@ public:
     void advect_smoke(double dt);
 
     void reset_pressure();
+
+    //obstacle inits
+
+    void set_circle_obstacle(double x, double y, double radius);
+
+
+
     // Test functions
 
 
