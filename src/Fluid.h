@@ -54,6 +54,8 @@ public:
     
     void advect_velocity(double dt);
 
+    void advect_smoke(double dt);
+
     void reset_pressure();
     // Test functions
 

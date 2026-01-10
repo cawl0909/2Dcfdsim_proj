@@ -21,8 +21,8 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer)
 int main(int argc, char *argv[])
 {
     // Simulation Paramters
-    const size_t GRID_SIZE_X = 20;
-    const size_t GRID_SIZE_Y = 20;
+    const size_t GRID_SIZE_X = 100;
+    const size_t GRID_SIZE_Y = 50;
     const double CELL_LENGTH = 1.0;
     constexpr double TIME_STEP = 1.0/60;
     const double OVER_RELAXATION = 1.7;
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     }
 
     // GUI Paramters
-    const float PIXEL_SCALE = 32.0;
+    const float PIXEL_SCALE = 16.0;
     const size_t WINDOW_SIZE_X = (GRID_SIZE_X)*PIXEL_SCALE;
     const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y)*PIXEL_SCALE;
 

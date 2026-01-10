@@ -222,6 +222,32 @@ void Fluid::advect_velocity(double dt)
     v_grid = new_v_grid;
 }
 
+void Fluid::advect_smoke(double dt)
+{
+    new_mass = mass;
+
+    double c2 = cell_size/2;
+
+    for(int i = 1; i<numX-1; i++)
+    {
+        for(int j = 1; j<numY-1;j++)
+        {
+            if(solid[i][j] != 0)
+            {
+                double u = (u_grid[i][j] + u_grid[i+1][j])*(0.5);
+                double v = (v_grid[i][j] + v_grid[i][j+1])*(0.5);
+
+                double x = (i*cell_size) + c2 - dt*u;
+                double y = (j*cell_size) + c2 - dt*v;
+
+                new_mass[i][j] = grid_interpolation(x,y,"s");
+            }
+        }
+    }
+
+    mass = new_mass;
+}
+
 void Fluid::reset_pressure()
 {
     for(int i = 0; i<numX;i++)
