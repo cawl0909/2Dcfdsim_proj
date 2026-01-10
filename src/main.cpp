@@ -22,8 +22,8 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer)
 int main(int argc, char *argv[])
 {
     // Simulation Paramters
-    const size_t GRID_SIZE_X = 150;
-    const size_t GRID_SIZE_Y = 100;
+    const size_t GRID_SIZE_X = 200;
+    const size_t GRID_SIZE_Y = 150;
     const double CELL_LENGTH = 0.1;
     constexpr double TIME_STEP = 1.0/60.0;
     const double OVER_RELAXATION = 1.7;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     fluidobj->set_circle_obstacle(obstacle_x, obstacle_y, obstacle_radius);
 
     // GUI Paramters
-    const float PIXEL_SCALE = 8.0;
+    const float PIXEL_SCALE = 4.0;
     const size_t WINDOW_SIZE_X = (GRID_SIZE_X)*PIXEL_SCALE;
     const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y)*PIXEL_SCALE;
 
