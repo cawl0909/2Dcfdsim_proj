@@ -63,14 +63,15 @@ void Fluid::solveIncompressability(int numIterations, double dt)
     {
         for(int i = 1; i<numX-1;i++)
         {
-            for(int j = 1; j < numY;j++)
+            // j must stay at least one cell away from the top border because we access j+1 below
+            for(int j = 1; j < numY-1;j++)
             {
                 if(solid[i][j] == 0.0){continue;}
 
                 double s_left = solid[i-1][j];
                 double s_right = solid[i+1][j];
-                double s_bottom = solid[i-1][j];
-                double s_top = solid[i+1][j];
+                double s_bottom = solid[i][j-1];
+                double s_top = solid[i][j+1];
 
                 double s_total = s_left + s_right + s_bottom + s_top;
 
@@ -84,7 +85,8 @@ void Fluid::solveIncompressability(int numIterations, double dt)
                 pressure[i][j] = pressure[i][j] + temp_p*(const_param);
 
                 u_grid[i][j] = u_grid[i][j] - s_left*temp_p;
-                u_grid[i+1][j] = u_grid[i+1][j] + s_top*temp_p;
+                // match the reference implementation: use right-hand solid flag for the right face
+                u_grid[i+1][j] = u_grid[i+1][j] + s_right*temp_p;
 
                 v_grid[i][j] = v_grid[i][j] - s_bottom*temp_p;
                 v_grid[i][j+1] = v_grid[i][j+1] + s_top*temp_p;
@@ -164,13 +166,13 @@ double Fluid::grid_interpolation(double x, double y, std::string field)
 
 double Fluid::get_avg_u(int x, int y)
 {
-    double total = u_grid[x][y] + u_grid[x-1][y] + u_grid[x+1][y-1] + u_grid[x+1][y];
-    return (total/4);
+    double total = u_grid[x][y-1] + u_grid[x][y] + u_grid[x+1][y-1] + u_grid[x+1][y];
+    return (total*0.25);
 }
 
 double Fluid::get_avg_v(int x, int y)
 {
-    double total = v_grid[x][y] + v_grid[x-1][y] + v_grid[x-1][y+1] + v_grid[x][y+1];
+    double total = v_grid[x-1][y] + v_grid[x][y] + v_grid[x-1][y+1] + v_grid[x][y+1];
     return (total/4);
 }
 
@@ -205,7 +207,8 @@ void Fluid::advect_velocity(double dt)
                 double sp_x = i*cell_size + c2;
                 double sp_y = j*cell_size;
 
-                double u = get_avg_v(i,j);
+                // use the averaged horizontal velocity here, as in the reference implementation
+                double u = get_avg_u(i,j);
                 double v = v_grid[i][j];
 
                 sp_x = sp_x - (dt*u);

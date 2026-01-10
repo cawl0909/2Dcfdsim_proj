@@ -22,11 +22,11 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer)
 int main(int argc, char *argv[])
 {
     // Simulation Paramters
-    const size_t GRID_SIZE_X = 100;
-    const size_t GRID_SIZE_Y = 50;
+    const size_t GRID_SIZE_X = 150;
+    const size_t GRID_SIZE_Y = 100;
     const double CELL_LENGTH = 1.0;
     constexpr double TIME_STEP = 1.0/60.0;
-    const double OVER_RELAXATION = 1.9;
+    const double OVER_RELAXATION = 1.7;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> distrib(1,255);
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 
 
     // Setting up fluid sim bc and setup
-    double inlet_velocity = 2.0;
+    double inlet_velocity = 20.0;
     for(int i =0; i<fluidobj->numX;i++)
     {
         for(int j = 0; j<fluidobj->numY;j++)
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-    double inlet_width = 5.0;
+    double inlet_width = 10.0;
     double fluid_height = (fluidobj->numY)*CELL_LENGTH;
     double mid_point  = fluid_height*0.5;
     int bot_j =  std::floor((mid_point - inlet_width*0.5)/CELL_LENGTH);
@@ -67,10 +67,10 @@ int main(int argc, char *argv[])
         fluidobj->mass[0][j] = 0.0;
     }
 
-    fluidobj->set_circle_obstacle(15,mid_point,5);
+    fluidobj->set_circle_obstacle(35,mid_point,10);
 
     // GUI Paramters
-    const float PIXEL_SCALE = 16.0;
+    const float PIXEL_SCALE = 8.0;
     const size_t WINDOW_SIZE_X = (GRID_SIZE_X)*PIXEL_SCALE;
     const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y)*PIXEL_SCALE;
 
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
         //SDL_RenderPoint(renderer,0,0);
 
         fluidobj->simulate(TIME_STEP,0.0,40);
-        std::cout<<"Frame count: "<<frame_count<<std::endl;
+        //std::cout<<"Frame count: "<<frame_count<<std::endl;
 
         for(size_t i = 1; i < GRID_SIZE_X+2-1; i++)
         {
