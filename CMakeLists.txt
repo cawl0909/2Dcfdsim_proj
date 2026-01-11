@@ -6,12 +6,13 @@ project(cfd_sim VERSION 0.1.0 LANGUAGES C CXX)
 find_package(SDL3 CONFIG REQUIRED)
 
 # Imgui
+
 include(FetchContent)
 
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG master
+    GIT_TAG v1.92.5
 )
 
 FetchContent_MakeAvailable(imgui)
@@ -40,5 +41,14 @@ src/vectors.cpp
 src/Fluid.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 imgui)
+# Ensure we include the same ImGui headers as the backends we build from FetchContent,
+# vcpkg used old version
+# massive headache :(
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    "${imgui_SOURCE_DIR}"
+    "${imgui_SOURCE_DIR}/backends"
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE imgui SDL3::SDL3)
 
