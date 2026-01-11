@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(cfd_sim VERSION 0.1.0 LANGUAGES C CXX)
 
-#sdl3
+#sdl3 I use vcpkg toolchain for this
 
 find_package(SDL3 CONFIG REQUIRED)
 
@@ -43,7 +43,7 @@ src/Fluid.cpp
 
 # Ensure we include the same ImGui headers as the backends we build from FetchContent,
 # vcpkg used old version
-# massive headache :(
+# massive headache :( ## NOTE VCPKG IMGUI VERSION CAUSED IT TO BE FOUND AHEAD OF THE BUILD VER BELLOW PUTS local IMGUI install ahead of vcpkg
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     "${imgui_SOURCE_DIR}"

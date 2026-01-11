@@ -17,10 +17,11 @@
 #include "vectors.h"
 #include "Fluid.h"
 
-void cleanup(SDL_Window* window, SDL_Renderer* renderer)
+void cleanup(SDL_Window* window, SDL_Renderer* renderer, SDL_Texture* texture)
 {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    SDL_DestroyTexture(texture);
     SDL_Quit();
     std::cout<<"Cleanup complete"<<std::endl;
 }
@@ -63,34 +64,34 @@ int main(int argc, char *argv[])
     }
 
     SDL_Window *window = SDL_CreateWindow(WINDOW_NAME,WINDOW_SIZE_X,WINDOW_SIZE_Y,0);
+    SDL_SetWindowResizable(window, true);
     SDL_Renderer *renderer = SDL_CreateRenderer(window,nullptr);
+    SDL_Texture* field_texture = SDL_CreateTexture(
+    renderer,
+    SDL_PIXELFORMAT_ARGB8888,
+    SDL_TEXTUREACCESS_STREAMING,
+    static_cast<int>(GRID_SIZE_X),
+    static_cast<int>(GRID_SIZE_Y)
+    );
 
     if(window == nullptr)
     {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,"INIT ERROR","SDL FAILED TO INIT WINDOW",nullptr);
-        cleanup(window,renderer);
+        cleanup(window,renderer,field_texture);
         return -1;
     }
 
     if(renderer == nullptr)
     {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,"INIT ERROR","SDL FAILED TO INIT RENDERER",nullptr);
-        cleanup(window,renderer);
+        cleanup(window,renderer,field_texture);
         return -1;
     }
-
-    SDL_Texture* field_texture = SDL_CreateTexture(
-        renderer,
-        SDL_PIXELFORMAT_ARGB8888,
-        SDL_TEXTUREACCESS_STREAMING,
-        static_cast<int>(GRID_SIZE_X),
-        static_cast<int>(GRID_SIZE_Y)
-    );
 
     if(field_texture == nullptr)
     {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,"INIT ERROR","SDL FAILED TO INIT FIELD TEXTURE",nullptr);
-        cleanup(window,renderer);
+        cleanup(window,renderer,field_texture);
         return -1;
     }
 
@@ -99,6 +100,22 @@ int main(int argc, char *argv[])
 
     std::vector<Uint32> field_pixels(GRID_SIZE_X * GRID_SIZE_Y, 0xFFFFFFFFu);
 
+    // IMGUI setup
+    
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); 
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+    ImGui::StyleColorsDark();
+
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    // --
+
+    ImGui_ImplSDL3_InitForSDLRenderer(window,renderer);
+    ImGui_ImplSDLRenderer3_Init(renderer);
 
     // Fluid setup
     // Setting up fluid sim bc and setup
@@ -152,9 +169,13 @@ int main(int argc, char *argv[])
     {
         start_tick = SDL_GetTicks();
         frame_count +=1;
+
+        // ------------------- EVENT LOOP ----------------------------
+
         SDL_Event e;
         while (SDL_PollEvent(&e))
         {
+            ImGui_ImplSDL3_ProcessEvent(&e);
             if (e.type == SDL_EVENT_QUIT)
             {
                 running = false;
@@ -167,6 +188,21 @@ int main(int argc, char *argv[])
             }
             
         }
+
+
+        // -------------------- RENDER LOOP SEGMENT --------------------------
+
+        // imgui
+        ImGui_ImplSDLRenderer3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+        ImGui::ShowDemoWindow();
+        
+
+        //main context for the drawing
+
+        ImGui::Render();
+
         SDL_SetRenderDrawColor(renderer,255,255,255,255);
         SDL_RenderClear(renderer);
         
@@ -209,10 +245,15 @@ int main(int argc, char *argv[])
 
         SDL_FRect dst = {0.0f, 0.0f, static_cast<float>(WINDOW_SIZE_X), static_cast<float>(WINDOW_SIZE_Y)};
         SDL_RenderTexture(renderer, field_texture, nullptr, &dst);
+
+        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),renderer);
         SDL_RenderPresent(renderer);
 
         //const size_t draw_ms = (SDL_GetTicks() - draw_tick1);
         //std::cout<<"Draw Time(ms) = "<< draw_ms <<std::endl;
+
+
+        // FIXES FPS WITH A WAIT IF TICK DELTA ISNT TARGET
 
         size_t current_tick = SDL_GetTicks();
         size_t tick_delta = current_tick-start_tick;
@@ -224,7 +265,9 @@ int main(int argc, char *argv[])
 
     }
 
-    SDL_DestroyTexture(field_texture);
-    cleanup(window,renderer);
+    ImGui_ImplSDLRenderer3_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+    cleanup(window,renderer,field_texture);
     return 0;
 }
