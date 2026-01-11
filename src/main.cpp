@@ -26,6 +26,45 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer, SDL_Texture* texture)
     std::cout<<"Cleanup complete"<<std::endl;
 }
 
+Uint32 rgb_scientific_colour_map(double value, double min, double max)
+{
+    float delta = (max-min);
+    float temp = (value - min)/delta;
+    temp = std::clamp(temp,0.0f,1.0f);
+    float r,g,b;
+    if(temp <= 0.5)
+    {
+        r = 1.0f - temp;
+        g = temp;
+        b = 0.0f;
+    }
+    else
+    {
+        r = 0.0f;
+        g = 1.0f-temp;
+        b = temp;
+    }
+
+    Uint32 r_i = static_cast<Uint32>(r*255.0f + 0.5f);
+    Uint32 g_i = static_cast<Uint32>(g*255.0f + 0.5f);
+    Uint32 b_i = static_cast<Uint32>(b*255.0f + 0.5f);
+
+    Uint32 alpha = 255;
+
+    Uint32 colour = (alpha << 24) | (r_i << 16) | (g_i << 8) | b_i;
+
+    return colour;
+}
+
+struct FluidSimRenderState
+{
+    bool show_streamlines = false;
+    bool show_obstacles = false;
+    bool show_pressure =  false;
+    bool show_mass = false;
+    bool show_velocity = false;
+};
+
 int main(int argc, char *argv[])
 {
     // Simulation Paramters
@@ -73,7 +112,6 @@ int main(int argc, char *argv[])
         static_cast<int>(WINDOW_SIZE_Y),
         0
     );
-    SDL_SetWindowResizable(window, true);
     SDL_Renderer *renderer = SDL_CreateRenderer(window,nullptr);
     SDL_Texture* field_texture = SDL_CreateTexture(
     renderer,
@@ -107,7 +145,7 @@ int main(int argc, char *argv[])
     SDL_SetTextureScaleMode(field_texture, SDL_SCALEMODE_NEAREST);
     SDL_SetTextureBlendMode(field_texture, SDL_BLENDMODE_NONE);
 
-    std::vector<Uint32> field_pixels(GRID_SIZE_X * GRID_SIZE_Y, 0xFFFFFFFFu);
+    //std::vector<Uint32> field_pixels(GRID_SIZE_X * GRID_SIZE_Y, 0xFFFFFFFFu);
 
     // IMGUI setup
     
@@ -178,12 +216,24 @@ int main(int argc, char *argv[])
     bool pause_sim = false;
     float sidebar_width = static_cast<float>(INITIAL_SIDEBAR_WIDTH_PX);
 
+    // what to render 
+
+    FluidSimRenderState fs_render_state = FluidSimRenderState{};
+
+    fs_render_state.show_mass = true;
+    fs_render_state.show_obstacles = true;
+
+
+
+    //
+    const Uint32 red  = 0xFFFF0000;
+
     size_t start_tick;
     while (running) 
     {
         start_tick = SDL_GetTicks();
         frame_count +=1;
-
+        std::vector<Uint32> field_pixels(GRID_SIZE_X * GRID_SIZE_Y, 0xFFFFFFFFu);
         // ------------------- EVENT LOOP ----------------------------
 
         SDL_Event e;
@@ -226,12 +276,20 @@ int main(int argc, char *argv[])
         {
             ImGui::Text("CFD SIM");
             ImGui::Separator();
-            ImGui::Checkbox("Pause simulation", &pause_sim);
-            ImGui::Checkbox("Show ImGui demo", &show_imgui_demo);
             if(ImGui::CollapsingHeader("Renderering Details"))
             {
                 ImGui::Text("Frame: %d", frame_count);
                 ImGui::Text("FPS: %.1f", io.Framerate);
+            }
+            ImGui::Checkbox("Show ImGui demo", &show_imgui_demo);
+            if(ImGui::CollapsingHeader("Simulation rendering options"))
+            {
+                ImGui::Checkbox("Show Mass",&(fs_render_state.show_mass)); 
+                ImGui::Checkbox("Show obstalces",&(fs_render_state.show_obstacles));
+            }
+            if(ImGui::CollapsingHeader("Simulation Options",ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::Checkbox("Pause simulation", &pause_sim);
             }
             if(ImGui::CollapsingHeader("Simulation Details",ImGuiTreeNodeFlags_DefaultOpen))
             {
@@ -267,27 +325,24 @@ int main(int argc, char *argv[])
         //std::cout<<"Sim Time(ms) = "<< sim_ms <<std::endl;
 
         const size_t draw_tick1 = SDL_GetTicks();
-
+        
         for(int i = 1; i < GRID_SIZE_X + 2 - 1; i++)
         {
             const int win_x = i - 1;
             for(int j = 1; j < GRID_SIZE_Y + 2 - 1; j++)
             {
                 const int win_y = j - 1;
-                const int ty = std::abs(static_cast<int>((j) - (GRID_SIZE_Y + 2 - 1)));
- 
-                const double smoke = fluidobj->mass[i][j];
-                const int smoke_c = std::clamp(smoke * 255.0, 0.0, 255.0);
-                const Uint32 gray = 0xFF000000u | (static_cast<Uint32>(smoke_c) << 16) | (static_cast<Uint32>(smoke_c) << 8) | static_cast<Uint32>(smoke_c);
-                const Uint32 red  = 0xFFFF0000u;
-
-                if(fluidobj->solid[i][ty] == 0.0)
+                const int ty = std::abs(static_cast<int>((j) - (GRID_SIZE_Y + 2 - 1))); // transforms top left to bottom left 
+                if(fs_render_state.show_mass == true)
+                {
+                    const double smoke = fluidobj->mass[i][j];
+                    const int smoke_c = std::clamp(smoke * 255.0, 0.0, 255.0);
+                    const Uint32 gray = 0xFF000000u | (static_cast<Uint32>(smoke_c) << 16) | (static_cast<Uint32>(smoke_c) << 8) | static_cast<Uint32>(smoke_c);
+                    field_pixels[win_y*GRID_SIZE_X+win_x] = gray;
+                }
+                if(fs_render_state.show_obstacles == true && fluidobj->solid[i][ty] == 0.0)
                 {
                     field_pixels[win_y*GRID_SIZE_X+win_x] = red;
-                }
-                else
-                {
-                    field_pixels[win_y*GRID_SIZE_X+win_x] = gray;
                 }
             }
         }
