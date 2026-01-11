@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
             for(int j = 1; j < GRID_SIZE_Y + 2 - 1; j++)
             {
                 const int win_y = j - 1;
-                const int ty = abs((j) - (GRID_SIZE_Y + 2 - 1));
+                const int ty = std::abs(static_cast<int>((j) - (GRID_SIZE_Y + 2 - 1)));
  
                 const double smoke = fluidobj->mass[i][j];
                 const int smoke_c = std::clamp(smoke * 255.0, 0.0, 255.0);
