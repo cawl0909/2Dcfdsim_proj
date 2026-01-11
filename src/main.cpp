@@ -48,6 +48,10 @@ int main(int argc, char *argv[])
     const size_t WINDOW_SIZE_X = (GRID_SIZE_X)*PIXEL_SCALE;
     const size_t WINDOW_SIZE_Y = (GRID_SIZE_Y)*PIXEL_SCALE;
 
+    // Extra space reserved for the left ImGui sidebar.
+    // This keeps the simulation area from shrinking when the sidebar is shown.
+    const int INITIAL_SIDEBAR_WIDTH_PX = 320;
+
     const char WINDOW_NAME[] = "CFD SIM";
 
     const size_t TARGET_FPS = 60;
@@ -63,7 +67,12 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    SDL_Window *window = SDL_CreateWindow(WINDOW_NAME,WINDOW_SIZE_X,WINDOW_SIZE_Y,0);
+    SDL_Window *window = SDL_CreateWindow(
+        WINDOW_NAME,
+        static_cast<int>(WINDOW_SIZE_X) + INITIAL_SIDEBAR_WIDTH_PX,
+        static_cast<int>(WINDOW_SIZE_Y),
+        0
+    );
     SDL_SetWindowResizable(window, true);
     SDL_Renderer *renderer = SDL_CreateRenderer(window,nullptr);
     SDL_Texture* field_texture = SDL_CreateTexture(
@@ -119,7 +128,7 @@ int main(int argc, char *argv[])
 
     // Fluid setup
     // Setting up fluid sim bc and setup
-    double inlet_velocity = 10.0;
+    float inlet_velocity = 10.0;
     for(int i =0; i<fluidobj->numX;i++)
     {
         for(int j = 0; j<fluidobj->numY;j++)
@@ -164,6 +173,11 @@ int main(int argc, char *argv[])
     bool running = true;
     int frame_count = 0;
 
+    // ImGui UI state
+    bool show_imgui_demo = false;
+    bool pause_sim = false;
+    float sidebar_width = static_cast<float>(INITIAL_SIDEBAR_WIDTH_PX);
+
     size_t start_tick;
     while (running) 
     {
@@ -196,7 +210,41 @@ int main(int argc, char *argv[])
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
-        ImGui::ShowDemoWindow();
+
+        // Fixed left sidebar
+        const ImVec2 display_size = io.DisplaySize;
+        const float clamped_sidebar_width = std::clamp(sidebar_width, 200.0f, std::max(200.0f, display_size.x - 50.0f));
+
+        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(clamped_sidebar_width, display_size.y), ImGuiCond_Always);
+        const ImGuiWindowFlags sidebar_flags = ImGuiWindowFlags_NoMove |
+                                              ImGuiWindowFlags_NoResize |
+                                              ImGuiWindowFlags_NoCollapse |
+                                              ImGuiWindowFlags_NoSavedSettings;
+
+        if (ImGui::Begin("Controls", nullptr, sidebar_flags))
+        {
+            ImGui::Text("CFD SIM");
+            ImGui::Separator();
+            ImGui::Checkbox("Pause simulation", &pause_sim);
+            ImGui::Checkbox("Show ImGui demo", &show_imgui_demo);
+            if(ImGui::CollapsingHeader("Renderering Details"))
+            {
+                ImGui::Text("Frame: %d", frame_count);
+                ImGui::Text("FPS: %.1f", io.Framerate);
+            }
+            if(ImGui::CollapsingHeader("Simulation Details",ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::Text("Sim Grid: %i by %i",GRID_SIZE_X,GRID_SIZE_Y);
+                ImGui::SliderFloat("Inlet Velocity",&inlet_velocity,0.0f,50.0f);
+            }
+        }
+        ImGui::End();
+
+        if (show_imgui_demo)
+        {
+            ImGui::ShowDemoWindow(&show_imgui_demo);
+        }
         
 
         //main context for the drawing
@@ -210,7 +258,10 @@ int main(int argc, char *argv[])
         //SDL_RenderLine(renderer,0,0,WINDOW_SIZE_X,WINDOW_SIZE_Y);
         //SDL_RenderPoint(renderer,0,0);
         //size_t sim_tick1 = SDL_GetTicks();
-        fluidobj->simulate(TIME_STEP,0.0,40);
+        if (!pause_sim)
+        {
+            fluidobj->simulate(TIME_STEP,0.0,40);
+        }
         //std::cout<<"Frame count: "<<frame_count<<std::endl;
         //const size_t sim_ms = (SDL_GetTicks() - sim_tick1);
         //std::cout<<"Sim Time(ms) = "<< sim_ms <<std::endl;
@@ -243,7 +294,11 @@ int main(int argc, char *argv[])
 
         SDL_UpdateTexture(field_texture, nullptr, field_pixels.data(), static_cast<int>(GRID_SIZE_X * sizeof(Uint32)));
 
-        SDL_FRect dst = {0.0f, 0.0f, static_cast<float>(WINDOW_SIZE_X), static_cast<float>(WINDOW_SIZE_Y)};
+        int window_px_w = 0;
+        int window_px_h = 0;
+        SDL_GetWindowSize(window, &window_px_w, &window_px_h);
+        const float sim_w = std::max(0.0f, static_cast<float>(window_px_w) - clamped_sidebar_width);
+        SDL_FRect dst = {clamped_sidebar_width, 0.0f, sim_w, static_cast<float>(window_px_h)};
         SDL_RenderTexture(renderer, field_texture, nullptr, &dst);
 
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),renderer);
