@@ -14,7 +14,8 @@ Built and tested with G++ on:
 
 The classic Kármán vortex street casued by vortex shedding seen simulated by this program. Have to pick an appropriate reynlods number regime however. 
 
-[![Didnt load :()](https://img.youtube.com/vi/KK8Ksa4rAc4/0.jpg)](https://www.youtube.com/watch?v=KK8Ksa4rAc4)
+
+<iframe width="560" height="315" src="https://www.youtube.com/watch?v=KK8Ksa4rAc4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 # Next steps
 - Extending to 3D, this requires not insignificant rewrites but is just a level up of this project and is "simple" enough to do in the long term.
