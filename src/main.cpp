@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <chrono>
 #include <thread>
+#include <cmath>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -17,6 +18,29 @@
 #include "vectors.h"
 #include "Fluid.h"
 
+
+double max2D(const std::vector<std::vector<double>>& vec)
+{
+    double max = 0.0;
+    for(int i = 0; i<vec.size();i++)
+    {
+        for(int j = 0; j<vec[i].size();j++)
+        {
+            if(vec[i][j] > max)
+            {
+                max = vec[i][j];
+            }
+        }
+    }
+    return max;
+}
+
+double sigmoid(double val,double k)
+{
+    return ((1)/(1+(std::exp((-val)*k))));
+}
+
+
 void cleanup(SDL_Window* window, SDL_Renderer* renderer, SDL_Texture* texture)
 {
     SDL_DestroyRenderer(renderer);
@@ -26,24 +50,18 @@ void cleanup(SDL_Window* window, SDL_Renderer* renderer, SDL_Texture* texture)
     std::cout<<"Cleanup complete"<<std::endl;
 }
 
-Uint32 rgb_scientific_colour_map(double value, double min, double max)
+Uint32 rgb_scientific_colour_map(double value, double min, double max,double k_sig)
 {
     float delta = (max-min);
     float temp = (value - min)/delta;
     temp = std::clamp(temp,0.0f,1.0f);
+    float temp_normalised = (temp-0.5f)*2;
+    temp = sigmoid(temp_normalised,k_sig);
     float r,g,b;
-    if(temp <= 0.5)
-    {
-        r = 1.0f - temp;
-        g = temp;
-        b = 0.0f;
-    }
-    else
-    {
-        r = 0.0f;
-        g = 1.0f-temp;
-        b = temp;
-    }
+
+    r = temp;
+    b = 1.0f-temp;
+    g = 0.0f;
 
     Uint32 r_i = static_cast<Uint32>(r*255.0f + 0.5f);
     Uint32 g_i = static_cast<Uint32>(g*255.0f + 0.5f);
@@ -59,8 +77,14 @@ Uint32 rgb_scientific_colour_map(double value, double min, double max)
 struct FluidSimRenderState
 {
     bool show_streamlines = false;
+    int sl_segments = 10;
+    double sl_segement_len = 0.0;
     bool show_obstacles = false;
+    // Pressure parameters
     bool show_pressure =  false;
+    float p_max = 100000.0f;
+    float p_sig_k = 1.0f;
+
     bool show_mass = false;
     bool show_velocity = false;
 };
@@ -69,7 +93,7 @@ int main(int argc, char *argv[])
 {
     // Simulation Paramters
     const size_t GRID_SIZE_X = 150;
-    const size_t GRID_SIZE_Y = 90;
+    const size_t GRID_SIZE_Y = 150;
     const double CELL_LENGTH = 0.1;
     constexpr double TIME_STEP = 1.0/60.0;
     const double OVER_RELAXATION = 1.9;
@@ -218,11 +242,13 @@ int main(int argc, char *argv[])
 
     // what to render 
 
-    FluidSimRenderState fs_render_state = FluidSimRenderState{};
+    FluidSimRenderState fs_render_state;
 
     fs_render_state.show_mass = true;
     fs_render_state.show_obstacles = true;
+    
 
+    fs_render_state.sl_segement_len = CELL_LENGTH/fs_render_state.sl_segments;
 
 
     //
@@ -286,6 +312,14 @@ int main(int argc, char *argv[])
             {
                 ImGui::Checkbox("Show Mass",&(fs_render_state.show_mass)); 
                 ImGui::Checkbox("Show obstalces",&(fs_render_state.show_obstacles));
+                ImGui::Checkbox("Show pressure",&(fs_render_state.show_pressure));
+                if(fs_render_state.show_pressure == true)
+                {
+                    ImGui::SliderFloat("Max P",&(fs_render_state.p_max),0.0f,250000.0f);
+                    ImGui::SliderFloat("P Sigmoid K",&(fs_render_state.p_sig_k),0.0f,20.0f);
+                    ImGui::Separator();
+                }
+                ImGui::Checkbox("Show StreamLines",&(fs_render_state.show_streamlines));
             }
             if(ImGui::CollapsingHeader("Simulation Options",ImGuiTreeNodeFlags_DefaultOpen))
             {
@@ -318,7 +352,7 @@ int main(int argc, char *argv[])
         //size_t sim_tick1 = SDL_GetTicks();
         if (!pause_sim)
         {
-            fluidobj->simulate(TIME_STEP,0.0,40);
+            fluidobj->simulate(TIME_STEP,0.0,30);
         }
         //std::cout<<"Frame count: "<<frame_count<<std::endl;
         //const size_t sim_ms = (SDL_GetTicks() - sim_tick1);
@@ -335,15 +369,30 @@ int main(int argc, char *argv[])
                 const int ty = std::abs(static_cast<int>((j) - (GRID_SIZE_Y + 2 - 1))); // transforms top left to bottom left 
                 if(fs_render_state.show_mass == true)
                 {
-                    const double smoke = fluidobj->mass[i][j];
-                    const int smoke_c = std::clamp(smoke * 255.0, 0.0, 255.0);
-                    const Uint32 gray = 0xFF000000u | (static_cast<Uint32>(smoke_c) << 16) | (static_cast<Uint32>(smoke_c) << 8) | static_cast<Uint32>(smoke_c);
+                    double smoke = fluidobj->mass[i][j];
+                    int smoke_c = std::clamp(smoke * 255.0, 0.0, 255.0);
+                    Uint32 gray = 0xFF000000u | (static_cast<Uint32>(smoke_c) << 16) | (static_cast<Uint32>(smoke_c) << 8) | static_cast<Uint32>(smoke_c);
                     field_pixels[win_y*GRID_SIZE_X+win_x] = gray;
+                }
+                if(fs_render_state.show_pressure == true)
+                {
+                    double pressure_val = fluidobj->pressure[i][j];
+                    Uint32 pressure_c = rgb_scientific_colour_map(pressure_val,0.0,fs_render_state.p_max,fs_render_state.p_sig_k);
+                    field_pixels[win_y*GRID_SIZE_X + win_x] = pressure_c;
+                }
+                if(fs_render_state.show_streamlines == true)
+                {
+                    if(i%5 == 0 && j%5 == 0)
+                    {
+                        double x_pos = (i+0.5)*CELL_LENGTH;
+                        double y_pos = (ty+0.5)*CELL_LENGTH;
+                    }
                 }
                 if(fs_render_state.show_obstacles == true && fluidobj->solid[i][ty] == 0.0)
                 {
                     field_pixels[win_y*GRID_SIZE_X+win_x] = red;
                 }
+                
             }
         }
 
@@ -356,6 +405,52 @@ int main(int argc, char *argv[])
         SDL_FRect dst = {clamped_sidebar_width, 0.0f, sim_w, static_cast<float>(window_px_h)};
         SDL_RenderTexture(renderer, field_texture, nullptr, &dst);
 
+
+        // this is bl origined Made to do post processing ontop of the base texture
+        if(fs_render_state.show_streamlines == true)
+        {
+            for(int i = 1; i< GRID_SIZE_X +2 -1; i++)
+            {
+                int win_x = i-1;
+                for(int j = 1; j< GRID_SIZE_Y +2 -1; j++)
+                {
+                    int win_j = j-1;
+                    if(fs_render_state.show_streamlines == true)
+                    {
+                        if(i%5 == 0 && j%5 == 0)
+                        {
+                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                            double x_start_sim = (i+0.5)*CELL_LENGTH;
+                            double y_start_sim = (j+0.5)*CELL_LENGTH;
+
+                            float x_start_window = (x_start_sim/CELL_LENGTH)*(PIXEL_SCALE) + sidebar_width -1;
+                            float y_start_window = GRID_SIZE_Y*PIXEL_SCALE-(y_start_sim/CELL_LENGTH)*(PIXEL_SCALE) -1;
+
+                            for(int segs = 0; segs<fs_render_state.sl_segments; segs++)
+                            {
+                                double u_sample = fluidobj->grid_interpolation(x_start_sim,y_start_sim,Fluid::Field::U);
+                                double v_sample = fluidobj->grid_interpolation(x_start_sim,y_start_sim,Fluid::Field::V);
+
+                                double sl_ts = 0.01;
+
+                                x_start_sim += u_sample*sl_ts;
+                                y_start_sim += v_sample*sl_ts;
+                                
+                                float x_win_temp = (x_start_sim/CELL_LENGTH)*(PIXEL_SCALE) +sidebar_width -1;
+                                float y_win_temp = GRID_SIZE_Y*PIXEL_SCALE-(y_start_sim/CELL_LENGTH)*PIXEL_SCALE -1;
+
+                                SDL_RenderLine(renderer,x_start_window,y_start_window,x_win_temp,y_win_temp);
+
+                                x_start_window = x_win_temp;
+                                y_start_window = y_win_temp;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // FINAL PRESENTATION
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),renderer);
         SDL_RenderPresent(renderer);
 
