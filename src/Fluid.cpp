@@ -317,3 +317,44 @@ void Fluid::set_circle_obstacle(double x, double y, double radius)
         }
     }
 }
+
+void Fluid::reset_obstacles()
+{
+    solid = std::vector<std::vector<double>>(numX,std::vector<double>(numY,1.0));
+}
+
+void Fluid::setup_wind_tunnel(double inlet_velocity)
+{
+    for(int i =0; i<numX;i++)
+    {
+        for(int j = 0; j<numY;j++)
+        {
+            double tS = 1.0;
+            if(i == 0 || j == 0 || j == numY-1)
+            {
+                tS = 0.0;
+            }
+            solid[i][j] = tS;
+
+            if(i == 1)
+            {
+                u_grid[i][j] = inlet_velocity;
+            }
+        }
+    }
+}
+
+void Fluid::setup_dye_inlet(double inlet_fraction)
+{
+    double inlet_cells = inlet_fraction * numY;
+    int bot_j = static_cast<int>(std::floor(0.5*numY -0.5*inlet_cells));
+    int top_j = static_cast<int>(std::floor(0.5*numY + 0.5*inlet_cells));
+
+    bot_j = std::max(bot_j,0);
+    top_j = std::min(top_j,static_cast<int>(numY));
+
+    for(int j = bot_j; j<top_j; ++j)
+    {
+        mass[0][j] = 0.0;
+    }
+}

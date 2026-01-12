@@ -76,8 +76,10 @@ Uint32 rgb_scientific_colour_map(double value, double min, double max,double k_s
 
 struct FluidSimRenderState
 {
+    int gauss_siedel_iterations = 30;
+
     bool show_streamlines = false;
-    int sl_segments = 10;
+    int sl_segments = 5;
     double sl_segement_len = 0.0;
     bool show_obstacles = false;
     // Pressure parameters
@@ -191,37 +193,13 @@ int main(int argc, char *argv[])
     // Fluid setup
     // Setting up fluid sim bc and setup
     float inlet_velocity = 10.0;
-    for(int i =0; i<fluidobj->numX;i++)
-    {
-        for(int j = 0; j<fluidobj->numY;j++)
-        {
-            double tS = 1.0;
-            if(i == 0 || j == 0 || j == fluidobj->numY-1)
-            {
-                tS = 0.0;
-            }
-            fluidobj->solid[i][j] = tS;
 
-            if(i == 1)
-            {
-                fluidobj->u_grid[i][j] = inlet_velocity;
-            }
-        }
-    }
+    fluidobj->setup_wind_tunnel(inlet_velocity);
+
     // Define inlet band as a fraction of the vertical cell count (independent of CELL_LENGTH)
     double inlet_fraction = 0.1; // 10% of the channel height
-    double inlet_cells = inlet_fraction * static_cast<double>(fluidobj->numY);
-    int bot_j = static_cast<int>(std::floor(0.5 * fluidobj->numY - 0.5 * inlet_cells));
-    int top_j = static_cast<int>(std::floor(0.5 * fluidobj->numY + 0.5 * inlet_cells));
 
-    // Clamp to valid index range to avoid out-of-bounds when CELL_LENGTH or grid size changes
-    bot_j = std::max(bot_j, 0);
-    top_j = std::min(top_j, static_cast<int>(fluidobj->numY));
-
-    for(int j = bot_j; j < top_j; ++j)
-    {
-        fluidobj->mass[0][j] = 0.0;
-    }
+    fluidobj->setup_dye_inlet(inlet_fraction);
 
     // Place the circular obstacle using normalized coordinates so it scales with CELL_LENGTH
     double domain_height = static_cast<double>(fluidobj->i_numY) * CELL_LENGTH;
@@ -237,7 +215,7 @@ int main(int argc, char *argv[])
 
     // ImGui UI state
     bool show_imgui_demo = false;
-    bool pause_sim = false;
+    bool pause_sim = true;
     float sidebar_width = static_cast<float>(INITIAL_SIDEBAR_WIDTH_PX);
 
     // what to render 
@@ -248,18 +226,17 @@ int main(int argc, char *argv[])
     fs_render_state.show_obstacles = true;
     
 
-    fs_render_state.sl_segement_len = CELL_LENGTH/fs_render_state.sl_segments;
+    fs_render_state.sl_segement_len = CELL_LENGTH*2/fs_render_state.sl_segments;
 
 
     //
     const Uint32 red  = 0xFFFF0000;
-
+    std::vector<Uint32> field_pixels(GRID_SIZE_X * GRID_SIZE_Y, 0xFFFFFFFFu);
     size_t start_tick;
     while (running) 
     {
         start_tick = SDL_GetTicks();
         frame_count +=1;
-        std::vector<Uint32> field_pixels(GRID_SIZE_X * GRID_SIZE_Y, 0xFFFFFFFFu);
         // ------------------- EVENT LOOP ----------------------------
 
         SDL_Event e;
@@ -307,7 +284,6 @@ int main(int argc, char *argv[])
                 ImGui::Text("Frame: %d", frame_count);
                 ImGui::Text("FPS: %.1f", io.Framerate);
             }
-            ImGui::Checkbox("Show ImGui demo", &show_imgui_demo);
             if(ImGui::CollapsingHeader("Simulation rendering options"))
             {
                 ImGui::Checkbox("Show Mass",&(fs_render_state.show_mass)); 
@@ -330,6 +306,8 @@ int main(int argc, char *argv[])
                 ImGui::Text("Sim Grid: %i by %i",GRID_SIZE_X,GRID_SIZE_Y);
                 ImGui::SliderFloat("Inlet Velocity",&inlet_velocity,0.0f,50.0f);
             }
+            ImGui::Separator();
+            ImGui::Checkbox("IMGUI demo TEST",&show_imgui_demo);
         }
         ImGui::End();
 
@@ -352,12 +330,11 @@ int main(int argc, char *argv[])
         //size_t sim_tick1 = SDL_GetTicks();
         if (!pause_sim)
         {
-            fluidobj->simulate(TIME_STEP,0.0,30);
+            fluidobj->simulate(TIME_STEP,0.0,fs_render_state.gauss_siedel_iterations);
         }
         //std::cout<<"Frame count: "<<frame_count<<std::endl;
         //const size_t sim_ms = (SDL_GetTicks() - sim_tick1);
         //std::cout<<"Sim Time(ms) = "<< sim_ms <<std::endl;
-
         const size_t draw_tick1 = SDL_GetTicks();
         
         for(int i = 1; i < GRID_SIZE_X + 2 - 1; i++)

@@ -1,5 +1,5 @@
 *.exe
 build/
 .vscode/
-CMakePresets.json
 test.html
+*.json

@@ -75,6 +75,11 @@ public:
     // Test functions
 
 
+    void reset_obstacles();
+
+    void setup_wind_tunnel(double inlet_velocity);
+    void setup_dye_inlet(double inlet_fraction);
+
     void randomise_velocities(std::mt19937& generator);
 };
 
